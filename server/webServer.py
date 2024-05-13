@@ -212,7 +212,6 @@ def robotCtrl(command_input, response):
         direction_command = 'no'
         move.move(speed_set, 'no', 'no', rad)
 
-
     elif 'left' == command_input:
         turn_command = 'left'
         move.move(speed_set, 'no', 'left', rad)
@@ -227,7 +226,6 @@ def robotCtrl(command_input, response):
             move.move(speed_set, 'no', 'no', rad)
         else:
             move.move(speed_set, direction_command, 'no', rad)
-
 
     elif 'lookleft' == command_input:
         P_sc.singleServo(0, 1, 3)
@@ -245,7 +243,7 @@ def robotCtrl(command_input, response):
         T_sc.singleServo(1, -1, 3)
 
     elif 'armstop' in command_input:
-    	T_sc.stopWiggle()
+        T_sc.stopWiggle()
 
     elif 'handup' == command_input:
         H_sc.singleServo(2, 1, 3)
@@ -270,7 +268,6 @@ def robotCtrl(command_input, response):
 
     elif 'camerastop' in command_input:
         C_sc.stopWiggle()
-
 
     elif 'stop' == command_input:
         G_sc.stopWiggle()

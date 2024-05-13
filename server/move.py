@@ -127,8 +127,7 @@ def move(speed, direction, turn, radius=0.6):   # 0 < radius <= 1
 		else:
 			motorStop()
 	else:
-		pass 
-
+		pass
 
 
 
