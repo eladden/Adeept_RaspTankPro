@@ -9,10 +9,10 @@ def mpu6050test():
   y = 0
   z = 0
   for i in range(0,10):
-    accelerometer_data = sensor.get_accel_data()
-    x = x + accelerometer_data['x']
-    y = y + accelerometer_data['y']
-    z = z + accelerometer_data['z']
+    gyro_data = sensor.get_gyro_data()
+    x = x + gyro_data['x']
+    y = y + gyro_data['y']
+    z = z + gyro_data['z']
   print('X=%.3f, Y=%.3f, Z=%.3f'%(x/10.0,y/10.0,z/10.0))
   time.sleep(0.3)
 
