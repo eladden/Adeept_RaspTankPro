@@ -1,0 +1,3 @@
+[submodule "Monocular-Video-Odometery"]
+	path = Monocular-Video-Odometery
+	url = https://github.com/eladden/Monocular-Video-Odometery.git
