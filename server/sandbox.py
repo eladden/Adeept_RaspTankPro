@@ -45,7 +45,21 @@ signal.signal(signal.SIGTERM, _sigterm_handler)
 
 
 # ===========================================================================
-# YOUR CODE GOES HERE
+# YOUR FUNCTIONS GO HERE
+# ===========================================================================
+"""
+    Write your functions here like this:"""
+def myfunc(parameterInA,paremeterInB):
+    """
+    Do something
+    """
+    parameterOutB = parameterInA
+    parameterOutA = paremeterInB
+
+    return parameterOutA, parameterOutB
+
+# ===========================================================================
+# YOUR RUN CODE GOES HERE
 # ===========================================================================
 
 def run():
