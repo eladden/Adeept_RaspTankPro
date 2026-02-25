@@ -372,9 +372,9 @@ class Robot:
 
         import cv2
         for attempt in range(1, 6):
-            self._cap = cv2.VideoCapture(0)           # works on Buster (legacy stack)
+            self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)  # V4L2 first — avoids MMAL hang
             if not self._cap.isOpened():
-                self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)  # needed on Bullseye+
+                self._cap = cv2.VideoCapture(0)              # fallback for non-Pi/USB cameras
             if self._cap.isOpened():
                 break
             self._cap.release()
