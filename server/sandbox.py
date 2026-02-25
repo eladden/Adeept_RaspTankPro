@@ -24,7 +24,7 @@ import sys
 # Stop the web server so we can use GPIO and the camera freely
 # ---------------------------------------------------------------------------
 subprocess.run(['sudo', 'pkill', '-f', 'webServer.py'], capture_output=True)
-time.sleep(1)   # Allow GPIO pins to be released
+time.sleep(3)   # Allow GPIO pins and camera to be released
 
 # ---------------------------------------------------------------------------
 # Create the robot object — this initialises all hardware

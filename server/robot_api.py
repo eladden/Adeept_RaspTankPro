@@ -371,9 +371,15 @@ class Robot:
             return
 
         import cv2
-        self._cap = cv2.VideoCapture(0)           # works on Buster (legacy stack)
-        if not self._cap.isOpened():
-            self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)  # needed on Bullseye+
+        for attempt in range(1, 6):
+            self._cap = cv2.VideoCapture(0)           # works on Buster (legacy stack)
+            if not self._cap.isOpened():
+                self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)  # needed on Bullseye+
+            if self._cap.isOpened():
+                break
+            self._cap.release()
+            print(f"[odometry] Camera busy, retrying ({attempt}/5)...")
+            time.sleep(1)
         if not self._cap.isOpened():
             raise RuntimeError(
                 "Cannot open camera. Is another program using it?"
