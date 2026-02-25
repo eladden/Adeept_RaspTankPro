@@ -215,6 +215,7 @@ def run_all_tests(robot, show_debug=True):
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
+    import os
     import subprocess
     import signal
     import sys
@@ -235,3 +236,4 @@ if __name__ == '__main__':
         run_all_tests(robot)
     finally:
         robot.cleanup()
+    os._exit(0)

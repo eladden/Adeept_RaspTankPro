@@ -15,10 +15,10 @@ so all hardware is available to your program.
 See STUDENT_GUIDE.md for the full API reference and examples.
 """
 
+import os
 import subprocess
 import time
 import signal
-import sys
 
 # ---------------------------------------------------------------------------
 # Stop the web server so we can use GPIO and the camera freely
@@ -43,7 +43,7 @@ robot = Robot()
 # ---------------------------------------------------------------------------
 def _sigterm_handler(signum, frame):
     robot.cleanup()
-    sys.exit(0)
+    os._exit(0)
 
 signal.signal(signal.SIGTERM, _sigterm_handler)
 
@@ -124,3 +124,4 @@ if __name__ == '__main__':
         run()
     finally:
         robot.cleanup()
+    os._exit(0)
