@@ -19,10 +19,11 @@ import ultra
 
 try:
     import Adafruit_PCA9685
-    _pwm = Adafruit_PCA9685.PCA9685()
+    _pwm = Adafruit_PCA9685.PCA9685(0x40, busnum=1)
     _pwm.set_pwm_freq(50)
     _SERVO_AVAILABLE = True
-except Exception:
+except Exception as e:
+    print(f"[robot_api] Servo init failed: {e}")
     _pwm = None
     _SERVO_AVAILABLE = False
 
@@ -30,7 +31,8 @@ try:
     from mpu6050 import mpu6050
     _imu = mpu6050(0x68)
     _IMU_AVAILABLE = True
-except Exception:
+except Exception as e:
+    print(f"[robot_api] IMU init failed: {e}")
     _imu = None
     _IMU_AVAILABLE = False
 
@@ -77,15 +79,24 @@ class Robot:
     """
     High-level interface to the RaspTankPro robot.
 
+    Parameters
+    ----------
+    reverse_motors : bool
+        Set to True if the robot drives backwards when forward() is called.
+        This happens when the motor A/B connectors are swapped during assembly.
+        Default is False.
+
     Example
     -------
-    robot = Robot()
+    robot = Robot()                      # normal wiring
+    robot = Robot(reverse_motors=True)   # motors connected backwards
     robot.forward(speed=50, duration=2.0)
     distance = robot.get_distance()
     robot.cleanup()
     """
 
-    def __init__(self):
+    def __init__(self, reverse_motors=False):
+        self._reverse_motors = reverse_motors
         move.setup()
         self._odometry_thread = None
         self._odometry_running = False
@@ -97,6 +108,12 @@ class Robot:
         # Reset servos to center on startup
         if _SERVO_AVAILABLE:
             self.reset_servos()
+
+    # Direction helpers — swap strings when motors are wired backwards
+    def _fwd(self):  return 'backward' if self._reverse_motors else 'forward'
+    def _bwd(self):  return 'forward'  if self._reverse_motors else 'backward'
+    def _spinL(self): return 'right'   if self._reverse_motors else 'left'
+    def _spinR(self): return 'left'    if self._reverse_motors else 'right'
 
     # ------------------------------------------------------------------
     # Movement
@@ -113,7 +130,7 @@ class Robot:
         duration : float or None
             Seconds to move. If None, moves until stop() is called.
         """
-        move.move(speed, 'forward', 'no')
+        move.move(speed, self._fwd(), 'no')
         if duration is not None:
             time.sleep(duration)
             move.motorStop()
@@ -129,7 +146,7 @@ class Robot:
         duration : float or None
             Seconds to move. If None, moves until stop() is called.
         """
-        move.move(speed, 'backward', 'no')
+        move.move(speed, self._bwd(), 'no')
         if duration is not None:
             time.sleep(duration)
             move.motorStop()
@@ -145,7 +162,7 @@ class Robot:
         duration : float or None
             Seconds to turn. If None, turns until stop() is called.
         """
-        move.move(speed, 'forward', 'left', radius=0)
+        move.move(speed, self._fwd(), 'left', radius=0)
         if duration is not None:
             time.sleep(duration)
             move.motorStop()
@@ -161,7 +178,7 @@ class Robot:
         duration : float or None
             Seconds to turn. If None, turns until stop() is called.
         """
-        move.move(speed, 'forward', 'right', radius=0)
+        move.move(speed, self._fwd(), 'right', radius=0)
         if duration is not None:
             time.sleep(duration)
             move.motorStop()
@@ -177,7 +194,7 @@ class Robot:
         duration : float or None
             Seconds to spin. If None, spins until stop() is called.
         """
-        move.move(speed, 'no', 'left')
+        move.move(speed, 'no', self._spinL())
         if duration is not None:
             time.sleep(duration)
             move.motorStop()
@@ -193,7 +210,7 @@ class Robot:
         duration : float or None
             Seconds to spin. If None, spins until stop() is called.
         """
-        move.move(speed, 'no', 'right')
+        move.move(speed, 'no', self._spinR())
         if duration is not None:
             time.sleep(duration)
             move.motorStop()
@@ -354,7 +371,9 @@ class Robot:
             return
 
         import cv2
-        self._cap = cv2.VideoCapture(0)
+        self._cap = cv2.VideoCapture(0)           # works on Buster (legacy stack)
+        if not self._cap.isOpened():
+            self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)  # needed on Bullseye+
         if not self._cap.isOpened():
             raise RuntimeError(
                 "Cannot open camera. Is another program using it?"

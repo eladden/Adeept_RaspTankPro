@@ -32,6 +32,9 @@ time.sleep(1)   # Allow GPIO pins to be released
 from robot_api import Robot
 
 robot = Robot()
+# If the robot drives backwards when forward() is called, the motors are
+# connected in reverse. Fix it by passing reverse_motors=True:
+# robot = Robot(reverse_motors=True)
 
 
 # ---------------------------------------------------------------------------
