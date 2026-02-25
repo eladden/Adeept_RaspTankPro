@@ -72,6 +72,49 @@ def _position_to_pwm(position, init, lo, hi, direction):
 
 
 # ---------------------------------------------------------------------------
+# picamera2 wrapper (Trixie / Bookworm — libcamera native API)
+# ---------------------------------------------------------------------------
+
+class _Picam2Capture:
+    """
+    VideoCapture-compatible wrapper around picamera2.
+
+    Used automatically on Trixie/Bookworm where the Pi camera is only
+    accessible via libcamera (V4L2 buffer allocation fails there).
+    Raises ImportError on Buster where picamera2 is not installed,
+    allowing the caller to fall back to cv2.VideoCapture.
+    """
+    def __init__(self, width=640, height=480):
+        from picamera2 import Picamera2          # ImportError on Buster → caller falls back
+        self._cam = Picamera2()
+        cfg = self._cam.create_preview_configuration(
+            main={"format": "BGR888", "size": (width, height)}
+        )
+        self._cam.configure(cfg)
+        self._cam.start()
+        self._opened = True
+
+    def isOpened(self):
+        return self._opened
+
+    def read(self):
+        try:
+            frame = self._cam.capture_array()    # BGR numpy array
+            return True, frame
+        except Exception:
+            return False, None
+
+    def get(self, prop):      return 0
+    def set(self, prop, val): return False
+
+    def release(self):
+        if self._opened:
+            self._cam.stop()
+            self._cam.close()
+            self._opened = False
+
+
+# ---------------------------------------------------------------------------
 # Robot class
 # ---------------------------------------------------------------------------
 
@@ -382,10 +425,12 @@ class Robot:
             self._traj_origin = (250, 250)
 
         import cv2
+
+        # Step 1: open with OpenCV VideoCapture (primary path — works on Buster)
         for attempt in range(1, 6):
-            self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)  # V4L2 first — avoids MMAL hang
+            self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
             if not self._cap.isOpened():
-                self._cap = cv2.VideoCapture(0)              # fallback for non-Pi/USB cameras
+                self._cap = cv2.VideoCapture(0)
             if self._cap.isOpened():
                 break
             self._cap.release()
@@ -396,12 +441,31 @@ class Robot:
                 "Cannot open camera. Is another program using it?"
             )
 
-        # Negotiate MJPG format to kick-start continuous streaming on
-        # Trixie/Bullseye+ (libcamera V4L2 compat only buffers one frame
-        # without an explicit format negotiation). Harmless on Buster.
-        self._cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # Step 2: verify the device actually delivers frames.
+        # On Trixie/Bookworm, isOpened()=True but V4L2 buffer allocation
+        # silently fails, so all reads return False immediately.
+        frames_ok = False
+        for _ in range(5):
+            ret, _ = self._cap.read()
+            if ret:
+                frames_ok = True
+                break
+            time.sleep(0.05)
+
+        if not frames_ok:
+            # V4L2 can't deliver frames — fall back to picamera2 (Trixie/Bookworm)
+            self._cap.release()
+            self._cap = None
+            try:
+                self._cap = _Picam2Capture(width=640, height=480)
+                print("[odometry] Falling back to picamera2 (libcamera native)")
+            except ImportError:
+                raise RuntimeError(
+                    "Camera opens but delivers no frames. "
+                    "On Trixie/Bookworm, install: sudo apt install python3-picamera2"
+                )
+            except Exception as e:
+                raise RuntimeError(f"Camera not available: {e}")
 
         self._vo = MonoVideoOdometeryFromCam(
             self._cap,
