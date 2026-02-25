@@ -284,7 +284,6 @@ class MonoVideoOdometeryFromCam(object):
 
         # If the frame is one of first two, we need to initalize
         # our t and R vectors so behavior is different
-        print(self.id)
         if self.id < 2:
             E, _ = cv2.findEssentialMat(self.good_new, self.good_old, self.focal, self.pp, cv2.RANSAC, 0.999, 1.0, None)
             _, self.R, self.t, _ = cv2.recoverPose(E, self.good_old, self.good_new, self.R.copy(), self.t.copy(), focal=self.focal, pp=self.pp, mask=None)

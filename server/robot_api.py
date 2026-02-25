@@ -534,6 +534,7 @@ class Robot:
         if getattr(self, '_show_debug', False):
             import cv2
             cv2.destroyAllWindows()
+            cv2.waitKey(1)
             self._show_debug = False
         if self._cap is not None:
             self._cap.release()
