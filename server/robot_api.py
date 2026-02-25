@@ -502,6 +502,12 @@ class Robot:
                 break
             except Exception:
                 pass
+        # Destroy windows from the same thread that created them — Qt requires this
+        if getattr(self, '_show_debug', False):
+            import cv2
+            cv2.destroyAllWindows()
+            cv2.waitKey(1)
+            self._show_debug = False
 
     def _draw_debug(self):
         """Draw live camera feed + 2-D trajectory when show_debug=True."""
@@ -529,13 +535,8 @@ class Robot:
         """Stop visual odometry and release the camera."""
         self._odometry_running = False
         if self._odometry_thread is not None:
-            self._odometry_thread.join(timeout=2.0)
+            self._odometry_thread.join(timeout=3.0)
             self._odometry_thread = None
-        if getattr(self, '_show_debug', False):
-            import cv2
-            cv2.destroyAllWindows()
-            cv2.waitKey(1)
-            self._show_debug = False
         if self._cap is not None:
             self._cap.release()
             self._cap = None
