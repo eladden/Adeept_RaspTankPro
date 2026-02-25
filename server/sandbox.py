@@ -24,6 +24,7 @@ import sys
 # Stop the web server so we can use GPIO and the camera freely
 # ---------------------------------------------------------------------------
 subprocess.run(['sudo', 'pkill', '-f', 'webServer.py'], capture_output=True)
+subprocess.run(['sudo', 'fuser', '-k', '/dev/video0'], capture_output=True)
 time.sleep(3)   # Allow GPIO pins and camera to be released
 
 # ---------------------------------------------------------------------------
