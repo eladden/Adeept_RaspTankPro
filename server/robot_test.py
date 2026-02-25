@@ -147,11 +147,11 @@ def _test_servos(robot):
     robot.reset_servos()
 
 
-def _test_odometry(robot):
+def _test_odometry(robot, show_debug=True):
     _section("Visual Odometry")
     try:
         print("  Starting odometry …")
-        robot.start_odometry()
+        robot.start_odometry(show_debug=show_debug)
         _ok("start_odometry")
     except Exception as e:
         _fail("start_odometry", str(e))
@@ -177,7 +177,7 @@ def _test_odometry(robot):
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def run_all_tests(robot):
+def run_all_tests(robot, show_debug=True):
     """
     Run all hardware tests using the given Robot instance.
 
@@ -190,6 +190,9 @@ def run_all_tests(robot):
     ----------
     robot : robot_api.Robot
         The already-initialised Robot object from sandbox.py.
+    show_debug : bool
+        If True (default), opens live camera and trajectory windows during
+        the odometry test. Pass False to suppress them.
     """
     print("\n" + "#"*50)
     print("  RaspTankPro Hardware Test")
@@ -200,7 +203,7 @@ def run_all_tests(robot):
     _test_gyro(robot)
     _test_accel(robot)
     _test_servos(robot)
-    _test_odometry(robot)
+    _test_odometry(robot, show_debug=show_debug)
 
     print("\n" + "#"*50)
     print("  Test complete. Review any [ FAIL ] lines above.")

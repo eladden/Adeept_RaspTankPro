@@ -348,22 +348,31 @@ class MonoVideoOdometeryFromCam(object):
         if self.id < 2:
             #self.old_frame = cv2.imread(self.file_path +str().zfill(6)+'.png', cv2.IMREAD_GRAYSCALE)
             #self.current_frame = cv2.imread(self.file_path + str(1).zfill(6)+'.png', cv2.IMREAD_GRAYSCALE)
-            ret = False
-            while not ret:
+            for _attempt in range(30):
                 ret, self.colorframe = self.cap.read()
+                if ret:
+                    break
+            if not ret:
+                raise RuntimeError("Camera stopped delivering frames")
             self.old_frame = cv2.cvtColor(self.colorframe, cv2.COLOR_BGR2GRAY)
 
-            ret=False
-            while not ret: 
+            for _attempt in range(30):
                 ret, self.colorframe = self.cap.read()
+                if ret:
+                    break
+            if not ret:
+                raise RuntimeError("Camera stopped delivering frames")
             self.current_frame = cv2.cvtColor(self.colorframe, cv2.COLOR_BGR2GRAY)
             if self.visual_odometery():
                 self.id = 2
         else:
             self.old_frame = self.current_frame
-            ret=False
-            while not ret:
-                ret,self.colorframe = self.cap.read()
+            for _attempt in range(30):
+                ret, self.colorframe = self.cap.read()
+                if ret:
+                    break
+            if not ret:
+                raise RuntimeError("Camera stopped delivering frames")
             self.current_frame = cv2.cvtColor(self.colorframe, cv2.COLOR_BGR2GRAY)
             self.visual_odometery()
             self.id += 1

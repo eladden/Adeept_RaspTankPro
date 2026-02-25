@@ -340,7 +340,7 @@ class Robot:
     # Visual Odometry
     # ------------------------------------------------------------------
 
-    def start_odometry(self, focal_length=537.0, pp=(320.0, 240.0), scale=1.0):
+    def start_odometry(self, focal_length=537.0, pp=(320.0, 240.0), scale=1.0, show_debug=False):
         """
         Start visual odometry in the background.
 
@@ -361,6 +361,11 @@ class Robot:
         scale : float
             Absolute scale factor applied to each translation step
             (default 1.0).
+        show_debug : bool
+            If True, opens two OpenCV windows while odometry is running:
+            a camera feed with tracked feature points and a 2-D trajectory
+            map. Useful for verifying the camera is working and the robot's
+            estimated path makes sense. Default False.
 
         Raises
         ------
@@ -369,6 +374,12 @@ class Robot:
         """
         if self._odometry_running:
             return
+
+        self._show_debug = show_debug
+        if show_debug:
+            import numpy as np
+            self._traj_canvas = np.zeros((500, 500, 3), dtype=np.uint8)
+            self._traj_origin = (250, 250)
 
         import cv2
         for attempt in range(1, 6):
@@ -384,6 +395,13 @@ class Robot:
             raise RuntimeError(
                 "Cannot open camera. Is another program using it?"
             )
+
+        # Negotiate MJPG format to kick-start continuous streaming on
+        # Trixie/Bullseye+ (libcamera V4L2 compat only buffers one frame
+        # without an explicit format negotiation). Harmless on Buster.
+        self._cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
         self._vo = MonoVideoOdometeryFromCam(
             self._cap,
@@ -412,8 +430,36 @@ class Robot:
                         float(coords[1]),
                         float(coords[2]),
                     )
+                if self._show_debug:
+                    self._draw_debug()
+            except RuntimeError as e:
+                print(f"[odometry] Stopped: {e}")
+                self._odometry_running = False
+                break
             except Exception:
                 pass
+
+    def _draw_debug(self):
+        """Draw live camera feed + 2-D trajectory when show_debug=True."""
+        import cv2 as _cv2
+        # Camera feed with tracked feature points
+        frame = self._vo.colorframe.copy()
+        if hasattr(self._vo, 'good_new') and len(self._vo.good_new) > 0:
+            for pt in self._vo.good_new:
+                _cv2.circle(frame, (int(pt[0]), int(pt[1])), 3, (0, 255, 0), -1)
+        _cv2.imshow('Odometry - Camera', frame)
+
+        # 2-D top-down trajectory (x = lateral, z = forward = up on canvas)
+        x, _, z = self._position
+        scale = 20  # pixels per unit
+        cx = self._traj_origin[0] + int(x * scale)
+        cz = self._traj_origin[1] - int(z * scale)
+        cx = max(0, min(499, cx))
+        cz = max(0, min(499, cz))
+        _cv2.circle(self._traj_canvas, (cx, cz), 2, (0, 200, 255), -1)
+        _cv2.imshow('Odometry - Trajectory', self._traj_canvas)
+
+        _cv2.waitKey(1)
 
     def stop_odometry(self):
         """Stop visual odometry and release the camera."""
@@ -421,6 +467,10 @@ class Robot:
         if self._odometry_thread is not None:
             self._odometry_thread.join(timeout=2.0)
             self._odometry_thread = None
+        if getattr(self, '_show_debug', False):
+            import cv2
+            cv2.destroyAllWindows()
+            self._show_debug = False
         if self._cap is not None:
             self._cap.release()
             self._cap = None

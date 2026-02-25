@@ -226,11 +226,12 @@ robot.stop_odometry()
 
 ### Function reference
 
-#### `robot.start_odometry(focal_length=537.0, pp=(320.0, 240.0), scale=1.0)`
+#### `robot.start_odometry(focal_length=537.0, pp=(320.0, 240.0), scale=1.0, show_debug=False)`
 Start position tracking in the background.
 - `focal_length` — camera focal length in pixels (default 537.0 for the Pi camera at 640×480)
 - `pp` — optical centre (cx, cy) in pixels (default (320.0, 240.0))
 - `scale` — scale factor applied to each translation step (default 1.0)
+- `show_debug` — if `True`, opens two windows while odometry runs: a live camera feed with tracked feature points and a 2-D trajectory map. Useful for verifying the camera works and the estimated path makes sense. Default `False`.
 
 Raises `RuntimeError` if the camera cannot be opened.
 
