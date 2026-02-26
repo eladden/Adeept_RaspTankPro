@@ -6,6 +6,8 @@ Run this script once on each robot to configure:
   1. Thonny IDE opens sandbox.py automatically when the desktop starts
   2. An "EMERGENCY STOP" shortcut is placed on the desktop
   3. /dev/mem access for the gpio group (needed for NeoPixel LEDs without sudo)
+  4. iomem=relaxed kernel parameter (disables strict /dev/mem DMA restrictions)
+  5. CAP_SYS_RAWIO capability on python3 (allows non-root open of /dev/mem)
 
 Usage (run from the project root):
     sudo python3 setup_sandbox.py
@@ -92,6 +94,41 @@ print(f"[OK] udev rule written: {UDEV_RULE_FILE}")
 real_user = os.environ.get('SUDO_USER', 'pi')
 subprocess.run(['usermod', '-a', '-G', 'gpio', real_user], check=False)
 print(f"[OK] Added {real_user} to gpio group (takes effect after reboot)")
+
+# ---------------------------------------------------------------------------
+# 4. iomem=relaxed kernel parameter — disables strict /dev/mem DMA restrictions
+# ---------------------------------------------------------------------------
+for _cmdline_path in ['/boot/firmware/cmdline.txt', '/boot/cmdline.txt']:
+    if os.path.exists(_cmdline_path):
+        break
+else:
+    _cmdline_path = None
+
+if _cmdline_path:
+    with open(_cmdline_path, 'r') as f:
+        _cmdline = f.read().strip()
+    if 'iomem=relaxed' not in _cmdline:
+        with open(_cmdline_path, 'w') as f:
+            f.write(_cmdline + ' iomem=relaxed\n')
+        print(f"[OK] Added 'iomem=relaxed' to {_cmdline_path}")
+    else:
+        print(f"[OK] 'iomem=relaxed' already in {_cmdline_path}")
+else:
+    print("[WARN] cmdline.txt not found — skipping iomem=relaxed")
+
+# ---------------------------------------------------------------------------
+# 5. CAP_SYS_RAWIO capability on python3 — allows non-root open() of /dev/mem
+# ---------------------------------------------------------------------------
+_python3_bin = subprocess.check_output(
+    ['readlink', '-f', sys.executable]).decode().strip()
+_result = subprocess.run(
+    ['setcap', 'cap_sys_rawio=eip', _python3_bin],
+    capture_output=True, check=False)
+if _result.returncode == 0:
+    print(f"[OK] Granted cap_sys_rawio to {_python3_bin}")
+else:
+    _err = _result.stderr.decode().strip()
+    print(f"[WARN] setcap failed ({_err}) — run: sudo apt install libcap2-bin")
 
 # ---------------------------------------------------------------------------
 # Done
