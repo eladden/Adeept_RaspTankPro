@@ -692,6 +692,7 @@ class Robot:
         if self._oled is not None:
             try:
                 self._oled.stop()
+                self._oled.join(timeout=1.0)  # wait for final render before exit
             except Exception:
                 pass
         move.destroy()
