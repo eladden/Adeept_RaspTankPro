@@ -186,7 +186,16 @@ if not check_systemctl_service(robot_service_name):
         os.system("sudo touch /"+ user_home +"/startup.sh")
         with open("/"+ user_home +"/startup.sh",'w') as file_to_write:
             #you can choose how to control the robot
-            file_to_write.write("#!/bin/sh\nsleep 5\nsudo python3 " + thisPath + "/server/webServer.py")
+            file_to_write.write(
+                "#!/bin/sh\n"
+                "sleep 5\n"
+                "\n"
+                "# Comment this line when working in sandbox:\n"
+                "sudo python3 " + thisPath + "/server/webServer.py\n"
+                "\n"
+                "# Uncomment this line when working in sandbox:\n"
+                "#sudo python3 " + thisPath + "/server/sandbox.py\n"
+            )
     except:
         pass
     os.system("sudo chmod 777 /"+ user_home +"/startup.sh")

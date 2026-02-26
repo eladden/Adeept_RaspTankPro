@@ -36,6 +36,25 @@ except Exception as e:
     _imu = None
     _IMU_AVAILABLE = False
 
+try:
+    from LED import LED as _LED_cls
+    _led_hw = _LED_cls()
+    _LED_AVAILABLE = True
+except Exception as e:
+    print(f"[robot_api] LED init failed: {e}")
+    _led_hw = None
+    _LED_AVAILABLE = False
+
+try:
+    import OLED as _OLED_mod
+    _oled_hw = _OLED_mod.OLED_ctrl()
+    _oled_hw.start()
+    _OLED_AVAILABLE = True
+except Exception as e:
+    print(f"[robot_api] OLED init failed: {e}")
+    _oled_hw = None
+    _OLED_AVAILABLE = False
+
 from monovideoodometery import MonoVideoOdometeryFromCam
 
 # ---------------------------------------------------------------------------
@@ -147,6 +166,8 @@ class Robot:
         self._position_lock = threading.Lock()
         self._vo = None
         self._cap = None
+        self._led  = _led_hw
+        self._oled = _oled_hw
 
         # Reset servos to center on startup
         if _SERVO_AVAILABLE:
@@ -378,6 +399,50 @@ class Robot:
         for name in _SERVO_CFG:
             ch, init, lo, hi, direction = _SERVO_CFG[name]
             _pwm.set_pwm(ch, 0, init)
+
+    # ------------------------------------------------------------------
+    # LEDs
+    # ------------------------------------------------------------------
+
+    def set_led_color(self, r, g, b):
+        """
+        Set all 16 LEDs to an RGB colour.
+
+        Parameters
+        ----------
+        r, g, b : int
+            Red, green, blue channel values, each 0–255.
+        """
+        if self._led is not None:
+            self._led.colorWipe(int(r), int(g), int(b))
+
+    def led_off(self):
+        """Turn all LEDs off."""
+        self.set_led_color(0, 0, 0)
+
+    # ------------------------------------------------------------------
+    # OLED display
+    # ------------------------------------------------------------------
+
+    def show_display(self, line, text):
+        """
+        Write text to a line on the OLED display.
+
+        Parameters
+        ----------
+        line : int
+            Display line number, 1 (top) to 6 (bottom).
+        text : any
+            Text to display. Numbers are converted to strings automatically.
+        """
+        if self._oled is not None:
+            self._oled.screen_show(int(line), str(text))
+
+    def clear_display(self):
+        """Clear all six lines of the OLED display."""
+        if self._oled is not None:
+            for i in range(1, 7):
+                self._oled.screen_show(i, '')
 
     # ------------------------------------------------------------------
     # Visual Odometry
@@ -624,6 +689,11 @@ class Robot:
         """
         move.motorStop()
         self.stop_odometry()
+        if self._oled is not None:
+            try:
+                self._oled.stop()
+            except Exception:
+                pass
         move.destroy()
 
     def __enter__(self):

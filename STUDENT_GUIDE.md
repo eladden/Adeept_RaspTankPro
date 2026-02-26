@@ -12,9 +12,10 @@ This guide explains how to write programs for the robot using the **sandbox envi
 4. [Sensors](#4-sensors)
 5. [Servos and the Arm](#5-servos-and-the-arm)
 6. [Visual Odometry (Position Tracking)](#6-visual-odometry-position-tracking)
-7. [Example Programs](#7-example-programs)
-8. [Running the Hardware Tests](#8-running-the-hardware-tests)
-9. [Troubleshooting](#9-troubleshooting)
+7. [Display and LEDs](#7-display-and-leds)
+8. [Example Programs](#8-example-programs)
+9. [Running the Hardware Tests](#9-running-the-hardware-tests)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -23,10 +24,12 @@ This guide explains how to write programs for the robot using the **sandbox envi
 | Component | Description |
 |-----------|-------------|
 | **Drive motors** | Two motors (left and right) control movement and turning |
-| **Servos** | Five servos: camera pan, camera tilt, head tilt, arm, and gripper |
+| **Servos** | Five servos: arm rotation (left-right), arm (up-down), hand (up-down), gripper (open-close), camera tilt (up-down) |
 | **Ultrasonic sensor** | Measures distance to the nearest obstacle (in metres) |
 | **MPU6050** | Combined gyroscope and accelerometer (angular velocity + acceleration) |
 | **Camera** | Raspberry Pi camera, used for the video stream and visual odometry |
+| **LED strip** | 16 RGB NeoPixel LEDs |
+| **OLED display** | Small SSD1306 screen with 6 lines of text |
 
 ---
 
@@ -34,18 +37,44 @@ This guide explains how to write programs for the robot using the **sandbox envi
 
 ### Powering on the robot
 
-1. Connect a keyboard, mouse, and monitor to the robot.
-2. Turn on the robot. The Raspberry Pi will boot and the desktop will appear.
+1. The robot turns on automatically when connected to a power source.
+2. Connect a keyboard, mouse, and monitor if you need to write or edit programs.
 3. **Thonny IDE** opens automatically with `sandbox.py` loaded — this is your programming environment.
 
 ### Writing and running your program
 
-1. Edit the `run()` function inside `sandbox.py`. Everything inside `run()` is your program.
-2. Press **F5** (or click the Run button in Thonny) to execute your program.
+1. Define any helper functions you need in the **functions area** above `run()` — there is an example function there to show the format.
+2. Write your main program inside the `run()` function.
+3. Press **F5** (or click the Run button in Thonny) to execute your program.
    - The web control server is stopped automatically when you press Run.
    - The robot's hardware is now exclusively available to your program.
-3. Press the **Stop button** (or **F2**) at any time to stop the robot safely.
-4. To reboot to the web server (demo mode), restart the robot.
+4. Press the **Stop button** (or **F2**) at any time to stop the robot safely.
+
+### Switching between Web Server and Sandbox mode
+
+The file `~/startup.sh` (`/home/pi/startup.sh`) controls what the robot runs on boot. Open it in a text editor (e.g. `nano ~/startup.sh`) and swap the comments:
+
+**Web Server mode** (default — control the robot from a browser):
+
+```sh
+# Comment this line when working in sandbox:
+sudo python3 /home/pi/adeept_rasptankpro/server/webServer.py
+
+# Uncomment this line when working in sandbox:
+#sudo python3 /home/pi/adeept_rasptankpro/server/sandbox.py
+```
+
+**Sandbox mode** (robot runs your `run()` function automatically on boot):
+
+```sh
+# Comment this line when working in sandbox:
+#sudo python3 /home/pi/adeept_rasptankpro/server/webServer.py
+
+# Uncomment this line when working in sandbox:
+sudo python3 /home/pi/adeept_rasptankpro/server/sandbox.py
+```
+
+Save the file and reboot. The robot will start in the selected mode.
 
 ### Emergency stop
 
@@ -68,7 +97,7 @@ robot.turn_right(speed=50, duration=0.5)# Pivot right (left wheel drives, right 
 robot.spin_left(speed=40, duration=1.0) # Spin in place counter-clockwise
 robot.spin_right(speed=40, duration=1.0)# Spin in place clockwise
 robot.stop()                            # Stop immediately
-robot.wait(1.5)                         # Pause for 1.5 seconds (robot stays still)
+robot.wait(1.5)                         # Block for 1.5 s — motors keep running if already on
 ```
 
 ### Function reference
@@ -97,7 +126,7 @@ Spin clockwise in place.
 Stop all motors immediately.
 
 #### `robot.wait(seconds)`
-Pause for the given number of seconds. The robot stays still.
+Block execution for the given number of seconds — the Python program does nothing during this time. **Any motors already running will continue running.** Use `robot.stop()` before or after `wait()` if you want the robot to stay still.
 
 ---
 
@@ -227,7 +256,7 @@ robot.stop_odometry()
 ### Function reference
 
 #### `robot.start_odometry(focal_length=537.0, pp=(320.0, 240.0), scale=1.0, show_debug=False)`
-Start position tracking in the background.
+Start position tracking in the background. All parameters have defaults — pass only the ones you need. For example, `robot.start_odometry(scale=4.7)` is valid.
 - `focal_length` — camera focal length in pixels (default 537.0 for the Pi camera at 640×480)
 - `pp` — optical centre (cx, cy) in pixels (default (320.0, 240.0))
 - `scale` — scale factor applied to each translation step (default 1.0)
@@ -249,7 +278,51 @@ Stop position tracking and release the camera.
 
 ---
 
-## 7. Example Programs
+## 7. Display and LEDs
+
+### LED strip
+
+The robot has 16 RGB LEDs. Set them all to any colour with three 0–255 values (red, green, blue).
+
+```python
+robot.set_led_color(255, 0, 0)    # Red
+robot.set_led_color(0, 255, 0)    # Green
+robot.set_led_color(0, 0, 255)    # Blue
+robot.set_led_color(255, 165, 0)  # Orange
+robot.led_off()                   # Turn off
+```
+
+#### `robot.set_led_color(r, g, b)`
+Set all LEDs to an RGB colour.
+- `r`, `g`, `b` — red, green, blue values, each 0–255
+
+#### `robot.led_off()`
+Turn all LEDs off (equivalent to `set_led_color(0, 0, 0)`).
+
+---
+
+### OLED display
+
+The robot has a small SSD1306 OLED screen with 6 lines of text (line 1 at the top, line 6 at the bottom).
+
+```python
+robot.show_display(1, 'Hello!')
+robot.show_display(2, f'Dist: {distance:.2f} m')
+robot.show_display(3, f'Speed: {speed}')
+robot.clear_display()             # Clear all lines
+```
+
+#### `robot.show_display(line, text)`
+Write text to a display line.
+- `line` — 1 (top) to 6 (bottom)
+- `text` — any value; numbers are converted to strings automatically
+
+#### `robot.clear_display()`
+Clear all six lines of the display.
+
+---
+
+## 8. Example Programs
 
 ### Example 1 — Move forward and stop before an obstacle
 
@@ -332,7 +405,7 @@ def run():
 
 ---
 
-## 8. Running the Hardware Tests
+## 9. Running the Hardware Tests
 
 To verify that all hardware is working correctly:
 
@@ -348,7 +421,7 @@ The test script will check each component in sequence and print `[ PASS ]` or `[
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 ### "Cannot open camera" when calling `start_odometry()`
 The camera is in use by another process (usually the web server). Make sure you ran the program through Thonny (F5), which stops the server automatically before starting your code.
