@@ -5,6 +5,7 @@ setup_sandbox.py — One-time setup for the student sandbox environment
 Run this script once on each robot to configure:
   1. Thonny IDE opens sandbox.py automatically when the desktop starts
   2. An "EMERGENCY STOP" shortcut is placed on the desktop
+  3. /dev/mem access for the gpio group (needed for NeoPixel LEDs without sudo)
 
 Usage (run from the project root):
     sudo python3 setup_sandbox.py
@@ -14,6 +15,7 @@ every time a student logs in.
 """
 
 import os
+import subprocess
 import sys
 import stat
 
@@ -74,6 +76,18 @@ with open(ESTOP_DESKTOP_FILE, 'w') as f:
 
 os.chmod(ESTOP_DESKTOP_FILE, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
 print(f"[OK] Emergency Stop shortcut created: {ESTOP_DESKTOP_FILE}")
+
+# ---------------------------------------------------------------------------
+# 3. /dev/mem udev rule — allows NeoPixel LEDs without sudo
+#    rpi_ws281x uses DMA via /dev/mem; pi is in the gpio group by default.
+# ---------------------------------------------------------------------------
+UDEV_RULE_FILE = '/etc/udev/rules.d/99-rpi-mem.rules'
+UDEV_RULE = 'KERNEL=="mem", GROUP="gpio", MODE="0660"\n'
+
+with open(UDEV_RULE_FILE, 'w') as f:
+    f.write(UDEV_RULE)
+subprocess.run(['udevadm', 'trigger', '--subsystem-match=mem'], check=False)
+print(f"[OK] udev rule written: {UDEV_RULE_FILE}")
 
 # ---------------------------------------------------------------------------
 # Done
