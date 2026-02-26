@@ -78,8 +78,8 @@ os.chmod(ESTOP_DESKTOP_FILE, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
 print(f"[OK] Emergency Stop shortcut created: {ESTOP_DESKTOP_FILE}")
 
 # ---------------------------------------------------------------------------
-# 3. /dev/mem udev rule — allows NeoPixel LEDs without sudo
-#    rpi_ws281x uses DMA via /dev/mem; pi is in the gpio group by default.
+# 3. /dev/mem udev rule + gpio group — allows NeoPixel LEDs without sudo
+#    rpi_ws281x uses DMA via /dev/mem; the user must be in the gpio group.
 # ---------------------------------------------------------------------------
 UDEV_RULE_FILE = '/etc/udev/rules.d/99-rpi-mem.rules'
 UDEV_RULE = 'KERNEL=="mem", GROUP="gpio", MODE="0660"\n'
@@ -88,6 +88,10 @@ with open(UDEV_RULE_FILE, 'w') as f:
     f.write(UDEV_RULE)
 subprocess.run(['udevadm', 'trigger', '--subsystem-match=mem'], check=False)
 print(f"[OK] udev rule written: {UDEV_RULE_FILE}")
+
+real_user = os.environ.get('SUDO_USER', 'pi')
+subprocess.run(['usermod', '-a', '-G', 'gpio', real_user], check=False)
+print(f"[OK] Added {real_user} to gpio group (takes effect after reboot)")
 
 # ---------------------------------------------------------------------------
 # Done
