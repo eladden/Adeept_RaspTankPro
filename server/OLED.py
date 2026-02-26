@@ -46,14 +46,16 @@ class OLED_ctrl(threading.Thread):
 	def run(self):
 		while self.__running.isSet():
 			self.__flag.wait()	  # 为True时立即返回, 为False时阻塞直到内部的标识位为True后返回
-			with canvas(device) as draw:
-				draw.text((0, 0), text_1, fill="white")
-				draw.text((0, 10), text_2, fill="white")
-				draw.text((0, 20), text_3, fill="white")
-				draw.text((0, 30), text_4, fill="white")
-				draw.text((0, 40), text_5, fill="white")
-				draw.text((0, 50), text_6, fill="white")
-			print('loop')
+			try:
+				with canvas(device) as draw:
+					draw.text((0, 0), text_1, fill="white")
+					draw.text((0, 10), text_2, fill="white")
+					draw.text((0, 20), text_3, fill="white")
+					draw.text((0, 30), text_4, fill="white")
+					draw.text((0, 40), text_5, fill="white")
+					draw.text((0, 50), text_6, fill="white")
+			except Exception as e:
+				print(f"[OLED] render error: {e}")
 			self.pause()
 
 	def pause(self):
