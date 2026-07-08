@@ -12,9 +12,16 @@ import time
 import threading
 import imutils
 import robotLight
-import picamera2
-import libcamera
-from picamera2 import Picamera2, Preview
+# picamera2/libcamera exist only on Bullseye/Bookworm. On Buster the camera is
+# reached through the legacy V4L2 stack via cv2.VideoCapture instead (same
+# fallback strategy as robot_api.py).
+try:
+    import picamera2
+    import libcamera
+    from picamera2 import Picamera2, Preview
+    PICAMERA2_AVAILABLE = True
+except ImportError:
+    PICAMERA2_AVAILABLE = False
 
 
 light = robotLight.RobotLight()
@@ -424,30 +431,51 @@ class Camera(BaseCamera):
     @staticmethod
     def frames():
         global ImgIsNone,hflip,vflip
-        picam2 = Picamera2() 
-        
-        preview_config = picam2.preview_configuration
-        # preview_config.size = (800, 600)
-        preview_config.size = (640, 480)
-        preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
-        # hflip = 0
-        # vflip = 0
-        preview_config.transform = libcamera.Transform(hflip=hflip, vflip=vflip)
-        preview_config.colour_space = libcamera.ColorSpace.Sycc()
-        preview_config.buffer_count = 4
-        preview_config.queue = True
-        # preview_config.framerate = 20
+        if PICAMERA2_AVAILABLE:
+            picam2 = Picamera2()
 
-        # if not camera.isOpened():
-        if not picam2.is_open:
-            raise RuntimeError('Could not start camera.')
+            preview_config = picam2.preview_configuration
+            # preview_config.size = (800, 600)
+            preview_config.size = (640, 480)
+            preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
+            # hflip = 0
+            # vflip = 0
+            preview_config.transform = libcamera.Transform(hflip=hflip, vflip=vflip)
+            preview_config.colour_space = libcamera.ColorSpace.Sycc()
+            preview_config.buffer_count = 4
+            preview_config.queue = True
+            # preview_config.framerate = 20
 
-        try:
-            picam2.start()
-        except Exception as e:
-            print(f"\033[38;5;1mError:\033[0m\n{e}")
-            print("\nPlease check whether the camera is connected well,  \
-                  and disable the \"legacy camera driver\" on raspi-config")
+            # if not camera.isOpened():
+            if not picam2.is_open:
+                raise RuntimeError('Could not start camera.')
+
+            try:
+                picam2.start()
+            except Exception as e:
+                print(f"\033[38;5;1mError:\033[0m\n{e}")
+                print("\nPlease check whether the camera is connected well,  \
+                      and disable the \"legacy camera driver\" on raspi-config")
+
+            grab_frame = picam2.capture_array
+        else:
+            # Buster / legacy stack: needs the Legacy Camera enabled in
+            # raspi-config so /dev/video0 exists.
+            camera = cv2.VideoCapture(0)
+            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            if not camera.isOpened():
+                raise RuntimeError('Could not start camera.')
+
+            def grab_frame():
+                ret, frame = camera.read()
+                if not ret or frame is None:
+                    return None
+                if hflip:
+                    frame = cv2.flip(frame, 1)
+                if vflip:
+                    frame = cv2.flip(frame, 0)
+                return frame
 
         cvt = CVThread()
         cvt.start()
@@ -455,7 +483,7 @@ class Camera(BaseCamera):
         while True:
             start_time = time.time()
             # read current frame
-            img = picam2.capture_array()
+            img = grab_frame()
 
             if img is None:
                 if ImgIsNone == 0:

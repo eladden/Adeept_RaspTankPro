@@ -43,22 +43,49 @@ STUDENT_GUIDE_HE.md          Student programming guide (Hebrew)
    ```
    The `--recursive` flag also clones the visual odometry submodule.
 
-2. Run the installation script (installs all dependencies and configures autostart):
+2. Run the installation script (installs all dependencies and configures autostart).
+   It asks for the robot's number — the robot is then named `Robot<X>` (Wi-Fi hotspot
+   name and OLED display). The script **reboots the robot when it finishes**:
    ```bash
    sudo python3 setup.py
    ```
 
-3. Run the sandbox setup script once to configure Thonny IDE autostart and the emergency-stop desktop shortcut:
+3. After the reboot, run the sandbox setup script once to configure Thonny IDE autostart and the emergency-stop desktop shortcut, then reboot again:
    ```bash
    sudo python3 setup_sandbox.py
+   sudo reboot
    ```
 
-4. Reboot. The web control server starts automatically and Thonny opens `sandbox.py`.
+4. Done. The web control server starts automatically and Thonny opens `sandbox.py`.
 
 ### Normal operation (web control mode)
 
-- Connect to the robot's Wi-Fi hotspot.
-- Open a browser and navigate to the robot's IP address to access the live control panel.
+- If the robot finds a known Wi-Fi network it joins it (its IP is shown on the OLED screen).
+  Otherwise it creates its own hotspot: network name **Robot\<X\>** (the robot's number),
+  password **12345678**, robot address **192.168.12.1**.
+- Open a browser and go to **http://192.168.12.1:5000** (or `http://<robot-ip>:5000` on a
+  shared network). The page shows the live camera and the driving controls.
+
+### Updating an installed robot
+
+```bash
+cd Adeept_RaspTankPro
+git pull
+git submodule update --init --recursive   # plain 'git pull' does NOT update the submodule
+```
+
+To re-run the installer after an update (refreshes packages and the autostart services),
+first stop the running services, then install:
+
+```bash
+sudo python3 pre-resetup.py   # only needed before RE-running setup.py
+sudo python3 setup.py         # reboots when done
+sudo python3 setup_sandbox.py # after the reboot, then reboot again
+```
+
+Note for older (Buster) robots: during `setup.py` a few packages will fail to install with
+red error messages (e.g. `python3-picamera2` does not exist for Buster). This is expected and
+harmless — the installer retries and continues, and those packages are not needed on Buster.
 
 ### Student sandbox mode
 
@@ -94,6 +121,9 @@ robot.forward(speed=40, duration=3.0)
 x, y, z = robot.get_position()   # relative units
 robot.stop_odometry()
 ```
+
+`start_odometry(show_debug=True)` opens live debug windows — this requires a monitor
+connected to the robot (with no display the windows are silently skipped).
 
 ## Hardware Verification
 

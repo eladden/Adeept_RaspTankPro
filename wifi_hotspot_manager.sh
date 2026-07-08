@@ -2,10 +2,10 @@
 
 # Configuration parameters - modify these values according to your needs
 SYSTEM_WIFI_CONN="preconfigured"  # Default connection name for Bookworm system
-HOTSPOT_SSID="Adeept_Robot"
+HOTSPOT_SSID="Robot1"  # Replaced with Robot<X> by setup.py (robot number prompt)
 HOTSPOT_PASSWORD="12345678"  # At least 8 characters
 HOTSPOT_INTERFACE="wlan0"
-WIFI_AP_GATEWAY="192.168.4.1"
+WIFI_AP_GATEWAY="192.168.12.1"  # Same address as the legacy create_ap hotspot
 
 # Wait for network service to be ready
 echo "Waiting for network service to start..."

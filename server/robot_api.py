@@ -58,9 +58,10 @@ except Exception as e:
 from monovideoodometery import MonoVideoOdometeryFromCam
 
 # ---------------------------------------------------------------------------
-# Servo channel definitions (matching servo.py)
+# Servo channel definitions (drives the PCA9685 directly; PWM ranges follow
+# servo.py per channel, direction flags are this API's own convention)
 # ---------------------------------------------------------------------------
-# channel: (init_pwm, min_pwm, max_pwm, direction)
+# name: (channel, init_pwm, min_pwm, max_pwm, direction)
 #   direction=1  → position +1.0 maps to max_pwm
 #   direction=-1 → position +1.0 maps to min_pwm
 _SERVO_CFG = {
@@ -217,7 +218,10 @@ class Robot:
 
     def turn_left(self, speed=50, duration=None):
         """
-        Pivot left (right wheel drives forward, left wheel stops).
+        Pivot turn: one track drives forward, the other stops.
+
+        Note: which way the robot physically rotates depends on the motor
+        wiring of your build — verify on the robot (see reverse_motors).
 
         Parameters
         ----------
@@ -233,7 +237,11 @@ class Robot:
 
     def turn_right(self, speed=50, duration=None):
         """
-        Pivot right (left wheel drives forward, right wheel stops).
+        Pivot turn: one track drives forward, the other stops (mirror of
+        turn_left).
+
+        Note: which way the robot physically rotates depends on the motor
+        wiring of your build — verify on the robot (see reverse_motors).
 
         Parameters
         ----------

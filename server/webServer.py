@@ -25,12 +25,30 @@ import websockets
 import json
 import app
 
+
+def read_robot_name():
+    # robot_name.txt is written by setup.py (untracked, survives git pull)
+    try:
+        name_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+            'robot_name.txt')
+        with open(name_file) as f:
+            name = f.read().strip()
+        if name:
+            return name
+    except Exception:
+        pass
+    return 'Robot1'
+
+
+robot_name = read_robot_name()
+
 OLED_connection = 1
 try:
     import OLED
     screen = OLED.OLED_ctrl()
     screen.start()
-    screen.screen_show(1, 'Robot1')
+    screen.screen_show(1, robot_name)
 except:
     OLED_connection = 0
     print('OLED disconnected')
@@ -107,7 +125,7 @@ def FPV_thread():
 
 
 def ap_thread():
-    os.system("sudo create_ap wlan0 eth0 Robot1 12345678")
+    os.system("sudo create_ap wlan0 eth0 " + robot_name + " 12345678")
 
 
 def functionSelect(command_input, response):

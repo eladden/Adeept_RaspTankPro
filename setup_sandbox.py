@@ -17,9 +17,18 @@ every time a student logs in.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 import stat
+
+
+def _own_by_pi(path):
+    """Hand a file/dir created by root back to the pi user."""
+    try:
+        shutil.chown(path, 'pi', 'pi')
+    except Exception as e:
+        print(f"[WARN] could not chown {path} to pi: {e}")
 
 # ---------------------------------------------------------------------------
 # Resolve paths
@@ -27,7 +36,10 @@ import stat
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 SANDBOX_PATH = os.path.join(SCRIPT_DIR, 'server', 'sandbox.py')
 
-HOME = os.path.expanduser('~')
+# The student session is always the 'pi' user. Do NOT use expanduser('~') here:
+# under sudo it can resolve to /root, silently installing the autostart file and
+# the desktop shortcut where the pi desktop session never sees them.
+HOME = '/home/pi'
 AUTOSTART_DIR = os.path.join(HOME, '.config', 'autostart')
 DESKTOP_DIR = os.path.join(HOME, 'Desktop')
 
@@ -39,6 +51,9 @@ ESTOP_DESKTOP_FILE = os.path.join(DESKTOP_DIR, 'EMERGENCY_STOP.desktop')
 # ---------------------------------------------------------------------------
 os.makedirs(AUTOSTART_DIR, exist_ok=True)
 os.makedirs(DESKTOP_DIR, exist_ok=True)
+_own_by_pi(os.path.join(HOME, '.config'))
+_own_by_pi(AUTOSTART_DIR)
+_own_by_pi(DESKTOP_DIR)
 
 # ---------------------------------------------------------------------------
 # 1. Thonny autostart — opens sandbox.py on desktop login
@@ -57,6 +72,7 @@ with open(THONNY_DESKTOP_FILE, 'w') as f:
     f.write(thonny_desktop_content)
 
 os.chmod(THONNY_DESKTOP_FILE, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+_own_by_pi(THONNY_DESKTOP_FILE)
 print(f"[OK] Thonny autostart configured: {THONNY_DESKTOP_FILE}")
 
 # ---------------------------------------------------------------------------
@@ -77,6 +93,7 @@ with open(ESTOP_DESKTOP_FILE, 'w') as f:
     f.write(estop_desktop_content)
 
 os.chmod(ESTOP_DESKTOP_FILE, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+_own_by_pi(ESTOP_DESKTOP_FILE)
 print(f"[OK] Emergency Stop shortcut created: {ESTOP_DESKTOP_FILE}")
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,32 @@ user_home = os.popen('getent passwd %s | cut -d: -f 6'%username).readline().stri
 curpath = os.path.realpath(__file__)
 thisPath = "/" + os.path.dirname(curpath)
 
+# ---------------------------------------------------------------------------
+# Robot name: each robot gets a number; the name Robot<X> is used as the WiFi
+# hotspot SSID and shown on the OLED. Saved to an untracked file so git pull
+# never touches it.
+# ---------------------------------------------------------------------------
+robot_name_file = os.path.join(os.path.dirname(curpath), 'robot_name.txt')
+robot_name = 'Robot1'
+if os.path.exists(robot_name_file):
+    try:
+        with open(robot_name_file) as f:
+            existing = f.read().strip()
+        if existing:
+            robot_name = existing
+    except Exception:
+        pass
+try:
+    answer = input(f"Enter robot number [{robot_name[5:] if robot_name.startswith('Robot') else '1'}]: ").strip()
+    if answer:
+        robot_name = 'Robot' + str(int(answer))
+except (EOFError, ValueError):
+    print(f"Invalid or no input — keeping name {robot_name}")
+with open(robot_name_file, 'w') as f:
+    f.write(robot_name + '\n')
+os.system(f"chown {username}:{username} {robot_name_file}")
+print(f"Robot name: {robot_name} (saved to {robot_name_file})")
+
 def replace_num(file,initial,new_num):  
     newline=""
     str_num=str(new_num)
@@ -72,7 +98,7 @@ def check_systemctl_service(service_name):
 
 commands_apt = [
 "sudo apt-get update",
-"sudo apt-get install python3-gpiozero python3-pigpio",
+"sudo apt-get install -y python3-gpiozero python3-pigpio",
 "sudo apt-get install -y python3-pyqt5 python3-opengl",
 "sudo apt-get install -y python3-picamera2",
 "sudo apt-get install -y python3-opencv",
@@ -179,6 +205,12 @@ WantedBy=multi-user.target
         print(f"An error occurred: {e}")
 
 
+# Stamp this robot's name into the installed wifi script as the hotspot SSID
+# (runs on every setup, so re-running setup.py can renumber a robot)
+if os.path.exists("/home/pi/wifi_hotspot_manager.sh"):
+    os.system(f"sudo sed -i 's/^HOTSPOT_SSID=.*/HOTSPOT_SSID=\"{robot_name}\"/' /home/pi/wifi_hotspot_manager.sh")
+
+
 robot_service_name="Adeept_Robot.service"
 if not check_systemctl_service(robot_service_name):
     # auto start script
@@ -240,5 +272,9 @@ WantedBy=multi-user.target
         print(f"An error occurred: {e}")
 
 print('The program in Raspberry Pi has been installed, disconnected and restarted. \nYou can now power off the Raspberry Pi to install the camera and driver board (Robot HAT). \nAfter turning on again, the Raspberry Pi will automatically run the program to set the servos port signal to turn the servos to the middle position, which is convenient for mechanical assembly.')
+print('')
+print('*** After the reboot, run the sandbox setup once: ***')
+print('***     sudo python3 ' + thisPath + '/setup_sandbox.py')
+print('')
 print('restarting...')
 os.system("sudo reboot")

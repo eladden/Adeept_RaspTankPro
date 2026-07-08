@@ -92,8 +92,8 @@ If `duration` is omitted, the robot keeps moving until you call `robot.stop()`.
 ```python
 robot.forward(speed=50, duration=2.0)   # Move forward for 2 seconds at half speed
 robot.backward(speed=50, duration=1.0)  # Move backward for 1 second
-robot.turn_left(speed=50, duration=0.5) # Pivot left (right wheel drives, left stops)
-robot.turn_right(speed=50, duration=0.5)# Pivot right (left wheel drives, right stops)
+robot.turn_left(speed=50, duration=0.5) # Pivot turn (one track drives, the other stops)
+robot.turn_right(speed=50, duration=0.5)# Pivot turn the other way
 robot.spin_left(speed=40, duration=1.0) # Spin in place counter-clockwise
 robot.spin_right(speed=40, duration=1.0)# Spin in place clockwise
 robot.stop()                            # Stop immediately
@@ -111,10 +111,11 @@ Move forward.
 Move backward. Same parameters as `forward`.
 
 #### `robot.turn_left(speed=50, duration=None)`
-Pivot left. The right wheel drives forward; the left wheel stops.
+Pivot turn: one track drives forward while the other stops. Check on your robot
+which way it actually rotates — it depends on the motor wiring of the build.
 
 #### `robot.turn_right(speed=50, duration=None)`
-Pivot right. The left wheel drives forward; the right wheel stops.
+Pivot turn in the opposite direction of `turn_left`.
 
 #### `robot.spin_left(speed=50, duration=None)`
 Spin counter-clockwise in place. Both wheels move at the same speed in opposite directions.
@@ -260,7 +261,7 @@ Start position tracking in the background. All parameters have defaults — pass
 - `focal_length` — camera focal length in pixels (default 537.0 for the Pi camera at 640×480)
 - `pp` — optical centre (cx, cy) in pixels (default (320.0, 240.0))
 - `scale` — scale factor applied to each translation step (default 1.0)
-- `show_debug` — if `True`, opens two windows while odometry runs: a live camera feed with tracked feature points and a 2-D trajectory map. Useful for verifying the camera works and the estimated path makes sense. Default `False`.
+- `show_debug` — if `True`, opens two windows while odometry runs: a live camera feed with tracked feature points and a 2-D trajectory map. Useful for verifying the camera works and the estimated path makes sense. Requires a monitor connected to the robot (with no display the windows are silently skipped). Default `False`.
 
 Raises `RuntimeError` if the camera cannot be opened.
 
@@ -433,7 +434,7 @@ The MPU6050 gyro/accelerometer communicates over I2C. If it fails to initialise,
 The servo controller uses I2C (same bus as the gyro). Check the wiring and that I2C is enabled. If only some servos fail, there may be a PWM channel wiring issue.
 
 ### Robot does not stop when F2 is pressed
-Thonny sends SIGTERM to the running script. `sandbox.py` catches this signal and calls `robot.cleanup()`, which stops the motors. If the robot still moves, use the **EMERGENCY STOP** desktop shortcut.
+Thonny interrupts the running script, and the safety net at the end of `sandbox.py` (a `try/finally` block) always calls `robot.cleanup()`, which stops the motors — however the program ends. If the robot still moves, use the **EMERGENCY STOP** desktop shortcut.
 
 ### GPIO warnings at startup
 Raspberry Pi GPIO may print `RuntimeWarning: This channel is already in use`. This is harmless — it means the GPIO was not released cleanly by a previous run. The robot will still work correctly.
