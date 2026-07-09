@@ -501,7 +501,12 @@ class Robot:
 
         # Step 1: open with OpenCV VideoCapture (primary path — works on Buster)
         for attempt in range(1, 6):
-            self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+            try:
+                # two-arg form needs OpenCV >= 3.4; Buster's apt version (3.2)
+                # raises TypeError on it
+                self._cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+            except TypeError:
+                self._cap = cv2.VideoCapture(0)
             if not self._cap.isOpened():
                 self._cap = cv2.VideoCapture(0)
             if self._cap.isOpened():
