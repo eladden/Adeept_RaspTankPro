@@ -14,16 +14,51 @@ Option A — from sandbox.py (recommended):
 
 Option B — directly in Thonny:
     Switch Thonny's file to robot_test.py and press F5.
-    (The sandbox server-stop code will not run; make sure the
-     web server is not already using the GPIO.)
+    (Standalone mode stops the web server automatically before running.)
+
+Everything printed is also written to /home/pi/robot_test.log (appended,
+one timestamped block per run). Every line is forced onto the SD card the
+moment it is printed, so if power dies mid-test the log's last line shows
+exactly which test was running.
 """
 
+import os
+import sys
 import time
+import datetime
+
+LOG_FILE = '/home/pi/robot_test.log'
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+class _Tee:
+    """Write to the terminal and the log file at once; flush + fsync every
+    write so the log survives a sudden power cut."""
+
+    def __init__(self, stream, logfile):
+        self._stream = stream
+        self._log = logfile
+
+    def write(self, text):
+        self._stream.write(text)
+        self._stream.flush()
+        try:
+            self._log.write(text)
+            self._log.flush()
+            os.fsync(self._log.fileno())
+        except (OSError, ValueError):
+            pass  # never let logging kill a test
+
+    def flush(self):
+        self._stream.flush()
+        try:
+            self._log.flush()
+        except (OSError, ValueError):
+            pass
+
 
 def _ok(label):
     print(f"  [ PASS ] {label}")
@@ -122,7 +157,7 @@ def _test_accel(robot):
         _fail("accel", str(e))
 
 
-def _test_servos(robot):
+def _test_servos(robot, pause=2.0):
     _section("Servos")
     servos = [
         ("arm_rotation (left-right)", robot.set_arm_rotation),
@@ -132,9 +167,13 @@ def _test_servos(robot):
         ("camera_tilt (up-down)",     robot.set_camera_tilt),
     ]
     for name, setter in servos:
+        # the marker hits the SD card before the servo moves, so a power
+        # cut mid-movement leaves this as the log's last line
+        print(f"  >>> testing servo: {name}")
+        time.sleep(pause)
         try:
             print(f"  Sweeping {name}: -1 → +1 → 0 …")
-            setter(-1.0)
+            setter(-1.0)   # servo ramps smoothly; call returns on arrival
             time.sleep(0.4)
             setter(1.0)
             time.sleep(0.4)
@@ -177,7 +216,7 @@ def _test_odometry(robot, show_debug=True):
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def run_all_tests(robot, show_debug=True):
+def run_all_tests(robot, show_debug=True, pause=2.0, log_file=None):
     """
     Run all hardware tests using the given Robot instance.
 
@@ -193,21 +232,53 @@ def run_all_tests(robot, show_debug=True):
     show_debug : bool
         If True (default), opens live camera and trajectory windows during
         the odometry test. Pass False to suppress them.
+    pause : float
+        Seconds to wait before each test (and each individual servo),
+        so you can watch what is about to happen. Default 2.0.
+    log_file : str or None
+        Where to also write everything printed. Default
+        /home/pi/robot_test.log (appended; falls back to a file next to
+        robot_test.py if that path is not writable).
     """
-    print("\n" + "#"*50)
-    print("  RaspTankPro Hardware Test")
-    print("#"*50)
+    if log_file is None:
+        log_file = LOG_FILE
+    try:
+        log = open(log_file, 'a')
+    except OSError:
+        log_file = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), 'robot_test.log')
+        log = open(log_file, 'a')
 
-    _test_motors(robot)
-    _test_distance(robot)
-    _test_gyro(robot)
-    _test_accel(robot)
-    _test_servos(robot)
-    _test_odometry(robot, show_debug=show_debug)
+    real_out, real_err = sys.stdout, sys.stderr
+    sys.stdout = _Tee(real_out, log)
+    sys.stderr = _Tee(real_err, log)
+    try:
+        stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print("\n" + "#"*50)
+        print(f"  RaspTankPro Hardware Test — {stamp}")
+        print(f"  (log: {log_file})")
+        print("#"*50)
 
-    print("\n" + "#"*50)
-    print("  Test complete. Review any [ FAIL ] lines above.")
-    print("#"*50 + "\n")
+        tests = [
+            ("Motors",            lambda: _test_motors(robot)),
+            ("Ultrasonic sensor", lambda: _test_distance(robot)),
+            ("Gyroscope",         lambda: _test_gyro(robot)),
+            ("Accelerometer",     lambda: _test_accel(robot)),
+            ("Servos",            lambda: _test_servos(robot, pause=pause)),
+            ("Visual odometry",   lambda: _test_odometry(robot, show_debug=show_debug)),
+        ]
+        for title, test_fn in tests:
+            print(f"\n>>> NEXT TEST: {title}  (starting in {pause:.0f} s)")
+            time.sleep(pause)
+            test_fn()
+
+        print("\n" + "#"*50)
+        print("  Test complete. Review any [ FAIL ] lines above.")
+        print(f"  Full output saved to {log_file}")
+        print("#"*50 + "\n")
+    finally:
+        sys.stdout, sys.stderr = real_out, real_err
+        log.close()
 
 
 # ---------------------------------------------------------------------------

@@ -72,6 +72,12 @@ _SERVO_CFG = {
     'camera_tilt':  (4, 300, 100, 500, -1),   # PWM4: tilt camera up-down
 }
 
+# Servo motion profile: every move ramps gently instead of jumping (same
+# step/delay approach as Adeept's RPIservo.py, without the background thread).
+# A full -1 → +1 sweep takes (2 / SERVO_STEP) * SERVO_STEP_DELAY ≈ 0.8 s.
+SERVO_STEP = 0.05        # position change per step, on the -1.0 .. +1.0 scale
+SERVO_STEP_DELAY = 0.02  # seconds between steps
+
 
 def _position_to_pwm(position, init, lo, hi, direction):
     """Map position [-1.0, +1.0] to a PWM value."""
@@ -169,6 +175,10 @@ class Robot:
         self._cap = None
         self._led  = _led_hw
         self._oled = _oled_hw
+
+        # Last commanded position per servo, on the -1..+1 scale. Movements
+        # ramp from here; assume centre until the startup reset below.
+        self._servo_pos = {name: 0.0 for name in _SERVO_CFG}
 
         # Reset servos to center on startup
         if _SERVO_AVAILABLE:
@@ -339,15 +349,31 @@ class Robot:
     # ------------------------------------------------------------------
 
     def _set_servo(self, name, position):
+        """
+        Ramp the servo gently from its last commanded position to the target.
+
+        Blocks until the movement completes. Holding needs no software: the
+        PCA9685 chip keeps emitting the final pulse train in hardware.
+        """
         if not _SERVO_AVAILABLE:
             return
         ch, init, lo, hi, direction = _SERVO_CFG[name]
-        pwm_val = _position_to_pwm(position, init, lo, hi, direction)
-        _pwm.set_pwm(ch, 0, pwm_val)
+        target = max(-1.0, min(1.0, float(position)))
+        pos = self._servo_pos.get(name, 0.0)
+        step = SERVO_STEP if target >= pos else -SERVO_STEP
+        while abs(target - pos) > SERVO_STEP:
+            pos += step
+            _pwm.set_pwm(ch, 0, _position_to_pwm(pos, init, lo, hi, direction))
+            time.sleep(SERVO_STEP_DELAY)
+        _pwm.set_pwm(ch, 0, _position_to_pwm(target, init, lo, hi, direction))
+        self._servo_pos[name] = target
 
     def set_arm_rotation(self, position):
         """
         Rotate the arm left or right (turret rotation).
+
+        The servo moves smoothly; the call returns when the movement
+        completes (up to ~1 s for a full sweep).
 
         Parameters
         ----------
@@ -360,6 +386,9 @@ class Robot:
         """
         Move the arm joint up or down.
 
+        The servo moves smoothly; the call returns when the movement
+        completes (up to ~1 s for a full sweep).
+
         Parameters
         ----------
         position : float
@@ -370,6 +399,9 @@ class Robot:
     def set_hand(self, position):
         """
         Move the hand (wrist/forearm) up or down.
+
+        The servo moves smoothly; the call returns when the movement
+        completes (up to ~1 s for a full sweep).
 
         Parameters
         ----------
@@ -382,6 +414,9 @@ class Robot:
         """
         Open or close the gripper.
 
+        The servo moves smoothly; the call returns when the movement
+        completes (up to ~1 s for a full sweep).
+
         Parameters
         ----------
         position : float
@@ -393,6 +428,9 @@ class Robot:
         """
         Tilt the camera up or down.
 
+        The servo moves smoothly; the call returns when the movement
+        completes (up to ~1 s for a full sweep).
+
         Parameters
         ----------
         position : float
@@ -401,12 +439,11 @@ class Robot:
         self._set_servo('camera_tilt', position)
 
     def reset_servos(self):
-        """Return all servos to their centre position."""
+        """Return all servos smoothly to their centre position."""
         if not _SERVO_AVAILABLE:
             return
         for name in _SERVO_CFG:
-            ch, init, lo, hi, direction = _SERVO_CFG[name]
-            _pwm.set_pwm(ch, 0, init)
+            self._set_servo(name, 0.0)
 
     # ------------------------------------------------------------------
     # LEDs
