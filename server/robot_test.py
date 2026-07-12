@@ -127,6 +127,8 @@ def _test_distance(robot):
 
     if all(r > 0 for r in readings):
         _ok(f"3 readings — average {sum(readings)/len(readings):.3f} m")
+    elif any(r == -1.0 for r in readings):
+        _fail("readings", "sensor not responding — check the 4 wires to the ultrasonic sensor")
     else:
         _fail("readings", "one or more readings were zero or negative")
 

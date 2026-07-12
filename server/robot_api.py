@@ -312,7 +312,8 @@ class Robot:
         Returns
         -------
         float
-            Distance to the nearest obstacle in metres.
+            Distance to the nearest obstacle in metres, or -1.0 if the
+            sensor does not respond (disconnected or faulty).
         """
         return ultra.checkdist()
 

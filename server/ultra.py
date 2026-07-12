@@ -16,18 +16,24 @@ GPIO.setup(Tr, GPIO.OUT,initial=GPIO.LOW)
 GPIO.setup(Ec, GPIO.IN)
 
 
-def checkdist():       #Reading distance
+def checkdist():       #Reading distance; -1.0 if the sensor does not respond
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(Tr, GPIO.OUT,initial=GPIO.LOW)
     GPIO.setup(Ec, GPIO.IN)
     GPIO.output(Tr, GPIO.HIGH)
     time.sleep(0.000015)
     GPIO.output(Tr, GPIO.LOW)
+    # a disconnected/faulty sensor never raises Ec — don't wait forever
+    # (max range ~4 m = ~24 ms echo; 100 ms is generous)
+    deadline = time.time() + 0.1
     while not GPIO.input(Ec):
-        pass
+        if time.time() > deadline:
+            return -1.0
     t1 = time.time()
+    deadline = t1 + 0.1
     while GPIO.input(Ec):
-        pass
+        if time.time() > deadline:
+            return -1.0
     t2 = time.time()
     return round((t2-t1)*340/2,2)
     #return (t2-t1)*340/2

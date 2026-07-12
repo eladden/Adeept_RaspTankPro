@@ -142,7 +142,8 @@ print(f"Obstacle is {distance:.2f} metres away")
 
 #### `robot.get_distance()` → `float`
 Returns the distance (in **metres**) to the nearest obstacle directly in front of the sensor.
-Values above ~2 m may be inaccurate. Returns 0 if no echo is received.
+Values above ~2 m may be inaccurate. Returns `-1.0` if the sensor does not respond
+(disconnected or faulty) — always check for this before using the value.
 
 ---
 
