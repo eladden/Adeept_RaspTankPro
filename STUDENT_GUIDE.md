@@ -300,7 +300,10 @@ robot.forward(speed=40, duration=3.0)
 
 # Read current position (x, y, z in relative units)
 x, y, z = robot.get_position()
-print(f"Position: x={x:.2f}  y={y:.2f}  z={z:.2f}")
+print(f"Position: forward={z:.2f}  sideways={x:.2f}")
+
+# Read current heading in degrees
+print(f"Heading: {robot.get_heading():.1f} degrees")
 
 # Reset origin to current position
 robot.reset_position()
@@ -325,8 +328,19 @@ Return the latest position estimate as a tuple of three floats.
 The origin is the robot's position when `start_odometry()` was called (or `reset_position()`).
 Raises `RuntimeError` if `start_odometry()` has not been called.
 
+#### `robot.get_heading()` → `float`
+Return the heading in **degrees**, measured from whichever way the robot was pointing when
+`start_odometry()` was called (or `reset_position()`).
+
+This comes from the same camera frames as `get_position()`, so it drifts in the same way and is
+always relative — never absolute. It is also only as good as the odometry's estimate of rotation:
+if the robot turns without the camera seeing much forward motion, the heading can lag or stop
+changing. Check it against a real turn before you rely on it.
+
+Raises `RuntimeError` if `start_odometry()` has not been called.
+
 #### `robot.reset_position()`
-Reset the current position to `(0, 0, 0)`.
+Reset the current position to `(0, 0, 0)` and the current heading to `0`.
 Raises `RuntimeError` if `start_odometry()` has not been called.
 
 #### `robot.stop_odometry()`

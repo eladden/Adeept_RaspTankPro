@@ -104,8 +104,9 @@ def run():
     # --- Visual odometry ---
     # robot.start_odometry()
     # robot.forward(speed=40, duration=3.0)
-    # x, y, z = robot.get_position()
-    # print(f"Position: x={x:.2f}  y={y:.2f}  z={z:.2f}")
+    # x, y, z = robot.get_position()   # z is forwards, x is sideways
+    # print(f"Position: forward={z:.2f}  sideways={x:.2f}")
+    # print(f"Heading: {robot.get_heading():.1f} degrees")
     # robot.stop_odometry()
 
     # --- Hardware tests ---
