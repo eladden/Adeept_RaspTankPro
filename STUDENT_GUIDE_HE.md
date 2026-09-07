@@ -114,14 +114,14 @@ sudo python3 /home/pi/adeept_rasptankpro/server/sandbox.py
 <div dir="ltr">
 
 ```python
-robot.forward(speed=50, duration=2.0)   # נוע קדימה 2 שניות במחצית המהירות
-robot.backward(speed=50, duration=1.0)  # נוע אחורה שנייה אחת
-robot.turn_left(speed=50, duration=0.5) # פניית ציר (זחל אחד נוסע, השני עוצר)
-robot.turn_right(speed=50, duration=0.5)# פניית ציר לכיוון השני
-robot.spin_left(speed=40, duration=1.0) # סתובב במקום נגד כיוון השעון
-robot.spin_right(speed=40, duration=1.0)# סתובב במקום עם כיוון השעון
-robot.stop()                            # עצור מיד
-robot.wait(1.5)                         # חסום 1.5 שניות — המנועים ממשיכים לרוץ אם כבר פעלו
+robot.forward(speed=50, duration=2.0)   # Move forward for 2 seconds at half speed
+robot.backward(speed=50, duration=1.0)  # Move backward for 1 second
+robot.turn_left(speed=50, duration=0.5) # Pivot turn (one track drives, the other stops)
+robot.turn_right(speed=50, duration=0.5)# Pivot turn the other way
+robot.spin_left(speed=40, duration=1.0) # Spin in place counter-clockwise
+robot.spin_right(speed=40, duration=1.0)# Spin in place clockwise
+robot.stop()                            # Stop immediately
+robot.wait(1.5)                         # Block for 1.5 s — motors keep running if already on
 ```
 
 </div>
@@ -164,7 +164,7 @@ robot.wait(1.5)                         # חסום 1.5 שניות — המנוע
 
 ```python
 distance = robot.get_distance()
-print(f"המכשול נמצא {distance:.2f} מטר מהרובוט")
+print(f"Obstacle is {distance:.2f} metres away")
 ```
 
 </div>
@@ -182,7 +182,7 @@ print(f"המכשול נמצא {distance:.2f} מטר מהרובוט")
 
 ```python
 gyro = robot.get_gyro()
-print(f"סיבוב — x: {gyro['x']:.2f}  y: {gyro['y']:.2f}  z: {gyro['z']:.2f}  °/s")
+print(f"Rotation — x: {gyro['x']:.2f}  y: {gyro['y']:.2f}  z: {gyro['z']:.2f}  °/s")
 ```
 
 </div>
@@ -209,7 +209,7 @@ print(f"סיבוב — x: {gyro['x']:.2f}  y: {gyro['y']:.2f}  z: {gyro['z']:.2f
 
 ```python
 accel = robot.get_accel()
-print(f"תאוצה — x: {accel['x']:.2f}  y: {accel['y']:.2f}  z: {accel['z']:.2f}  g")
+print(f"Acceleration — x: {accel['x']:.2f}  y: {accel['y']:.2f}  z: {accel['z']:.2f}  g")
 ```
 
 </div>
@@ -229,13 +229,13 @@ print(f"תאוצה — x: {accel['x']:.2f}  y: {accel['y']:.2f}  z: {accel['z']:
 <div dir="ltr">
 
 ```python
-robot.set_arm_rotation(-0.5) # סובב זרוע חצי דרך שמאלה
-robot.set_arm(0.8)           # הרם זרוע 80% מהדרך למעלה
-robot.set_hand(0.5)          # הרם יד חצי דרך למעלה
-robot.set_gripper(-1.0)      # סגור אחיזה לחלוטין
-robot.set_gripper(1.0)       # פתח אחיזה לחלוטין
-robot.set_camera_tilt(1.0)   # הטה מצלמה לחלוטין למעלה
-robot.reset_servos()         # החזר את כל הסרוויים למרכז
+robot.set_arm_rotation(-0.5) # Rotate arm halfway to the left
+robot.set_arm(0.8)           # Raise arm 80% of the way up
+robot.set_hand(0.5)          # Raise hand halfway up
+robot.set_gripper(-1.0)      # Close gripper fully
+robot.set_gripper(1.0)       # Open gripper fully
+robot.set_camera_tilt(1.0)   # Tilt camera fully up
+robot.reset_servos()         # Return all servos to centre
 ```
 
 </div>
@@ -284,20 +284,20 @@ robot.reset_servos()         # החזר את כל הסרוויים למרכז
 <div dir="ltr">
 
 ```python
-# התחל מעקב מיקום
+# Start tracking position
 robot.start_odometry()
 
-# ... הזז את הרובוט ...
+# ... move the robot ...
 robot.forward(speed=40, duration=3.0)
 
-# קרא את המיקום הנוכחי (x, y, z ביחידות יחסיות)
+# Read current position (x, y, z in relative units)
 x, y, z = robot.get_position()
-print(f"מיקום: x={x:.2f}  y={y:.2f}  z={z:.2f}")
+print(f"Position: x={x:.2f}  y={y:.2f}  z={z:.2f}")
 
-# אפס נקודת מוצא למיקום הנוכחי
+# Reset origin to current position
 robot.reset_position()
 
-# עצור מעקב כשסיימת
+# Stop tracking when done
 robot.stop_odometry()
 ```
 
@@ -337,11 +337,11 @@ robot.stop_odometry()
 <div dir="ltr">
 
 ```python
-robot.set_led_color(255, 0, 0)    # אדום
-robot.set_led_color(0, 255, 0)    # ירוק
-robot.set_led_color(0, 0, 255)    # כחול
-robot.set_led_color(255, 165, 0)  # כתום
-robot.led_off()                   # כיבוי
+robot.set_led_color(255, 0, 0)    # Red
+robot.set_led_color(0, 255, 0)    # Green
+robot.set_led_color(0, 0, 255)    # Blue
+robot.set_led_color(255, 165, 0)  # Orange
+robot.led_off()                   # Turn off
 ```
 
 </div>
@@ -362,10 +362,10 @@ robot.led_off()                   # כיבוי
 <div dir="ltr">
 
 ```python
-robot.show_display(1, 'שלום!')
-robot.show_display(2, f'מרחק: {distance:.2f} מ')
-robot.show_display(3, f'מהירות: {speed}')
-robot.clear_display()             # נקה את כל השורות
+robot.show_display(1, 'Hello!')
+robot.show_display(2, f'Dist: {distance:.2f} m')
+robot.show_display(3, f'Speed: {speed}')
+robot.clear_display()             # Clear all lines
 ```
 
 </div>
@@ -388,20 +388,20 @@ robot.clear_display()             # נקה את כל השורות
 
 ```python
 def run():
-    SAFE_DISTANCE = 0.30  # מטרים
+    SAFE_DISTANCE = 0.30  # metres
 
-    robot.forward(speed=40)   # התחל לנסוע (ללא duration — המשך לנסוע)
+    robot.forward(speed=40)   # Start moving (no duration — keep going)
 
     while True:
         distance = robot.get_distance()
-        print(f"מרחק: {distance:.2f} מ'")
+        print(f"Distance: {distance:.2f} m")
 
         if distance < SAFE_DISTANCE:
             robot.stop()
-            print("זוהה מכשול! עוצר.")
+            print("Obstacle detected! Stopped.")
             break
 
-        robot.wait(0.05)  # השהייה קצרה בין קריאות
+        robot.wait(0.05)  # Small delay between readings
 ```
 
 </div>
@@ -414,18 +414,18 @@ def run():
 
 ```python
 def run():
-    print("סורק...")
+    print("Scanning...")
     positions = [-1.0, -0.5, 0.0, 0.5, 1.0]
 
     for pos in positions:
         robot.set_arm_rotation(pos)
-        robot.wait(0.5)  # המתן עד שהסרוו יתייצב
+        robot.wait(0.5)  # Wait for servo to settle
         distance = robot.get_distance()
         angle_label = f"{int(pos * 90):+d}°"
-        print(f"  {angle_label}: {distance:.2f} מ'")
+        print(f"  {angle_label}: {distance:.2f} m")
 
     robot.reset_servos()
-    print("הסריקה הושלמה.")
+    print("Scan complete.")
 ```
 
 </div>
@@ -442,9 +442,9 @@ def run():
     import time
 
     LOG_FILE = '/home/pi/sensor_log.csv'
-    DURATION = 10.0  # שניות
+    DURATION = 10.0  # seconds
 
-    print(f"רושם חיישנים למשך {DURATION} שניות → {LOG_FILE}")
+    print(f"Logging sensors for {DURATION} s → {LOG_FILE}")
 
     with open(LOG_FILE, 'w', newline='') as f:
         writer = csv.writer(f)
@@ -464,11 +464,11 @@ def run():
                 gyro['x'], gyro['y'], gyro['z'],
                 accel['x'], accel['y'], accel['z'],
             ])
-            print(f"t={t:.1f}s  מרחק={dist:.2f}מ'  "
+            print(f"t={t:.1f}s  dist={dist:.2f}m  "
                   f"gyro_z={gyro['z']:.2f}")
             time.sleep(0.1)
 
-    print("סיום. פתחו את קובץ ה-CSV בגיליון אלקטרוני לניתוח הנתונים.")
+    print("Done. Open the CSV file in a spreadsheet to analyse the data.")
 ```
 
 </div>
@@ -482,7 +482,7 @@ def run():
 <div dir="ltr">
 
 ```python
-# ב-sandbox.py, החליפו את תוכן run() בקוד הבא:
+# In sandbox.py, replace the contents of run() with:
 from robot_test import run_all_tests
 
 def run():
