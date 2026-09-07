@@ -50,6 +50,8 @@ This guide explains how to write programs for the robot using the **sandbox envi
    - The robot's hardware is now exclusively available to your program.
 4. Press the **Stop button** (or **F2**) at any time to stop the robot safely.
 
+The web control server stays stopped until you reboot the robot. You can press F5 as many times as you like in the meantime — but the browser page will not work again until you reboot.
+
 ### Switching between Web Server and Sandbox mode
 
 The file `~/startup.sh` (`/home/pi/startup.sh`) controls what the robot runs on boot. Open it in a text editor (e.g. `nano ~/startup.sh`) and swap the comments:
@@ -156,14 +158,53 @@ print(f"Rotation — x: {gyro['x']:.2f}  y: {gyro['y']:.2f}  z: {gyro['z']:.2f} 
 
 #### `robot.get_gyro()` → `dict`
 Returns angular velocity in **degrees per second** as a dictionary with keys `'x'`, `'y'`, `'z'`.
+These are rates of turning, not angles — see [Heading from the gyro](#heading-from-the-gyro) below.
 
-| Axis | Meaning |
-|------|---------|
-| `x` | Rolling (tilting side to side) |
-| `y` | Pitching (tilting forward/backward) |
-| `z` | Yawing (rotating left/right) |
+The sensor is mounted with its **x axis pointing backwards, y axis pointing right, and z axis pointing up**:
+
+| Axis | Rotation | A positive value means |
+|------|----------|------------------------|
+| `x` | Roll (tilting side to side) | the left side is dropping |
+| `y` | Pitch (tilting forward/backward) | the nose is pitching up |
+| `z` | Yaw (rotating left/right) | turning **left** (counter-clockwise seen from above) |
+
+<img src="docs/robot-axes.svg" width="520" alt="Robot axes: the IMU frame in red, the camera frame in blue">
 
 Returns `{'x': 0, 'y': 0, 'z': 0}` if the sensor is not connected.
+
+---
+
+### Heading from the gyro
+
+The gyroscope tells you how **fast** the robot is turning, not which way it is facing. To get a
+heading you have to add up the rate over time yourself:
+
+```python
+def run():
+    heading = 0.0      # degrees, measured from wherever the robot starts
+    dt = 0.05
+
+    robot.spin_left(speed=40)
+    while heading < 90.0:
+        heading += robot.get_gyro()['z'] * dt
+        robot.wait(dt)
+
+    robot.stop()
+    print(f"Turned {heading:.1f} degrees")
+```
+
+Two things to expect:
+
+- **It drifts.** Every reading carries a small error, and adding the readings up adds the errors
+  up too. After a minute of turning the heading may be several degrees off, and that error never
+  corrects itself.
+- **There is no compass.** The MPU6050 has a gyroscope and an accelerometer but no magnetometer,
+  so nothing tells the robot which way is north. Your heading is always relative to whichever way
+  the robot happened to be pointing when your program started.
+
+> **Careful — `z` means two different things.** `get_gyro()['z']` is rotation about the
+> **vertical** axis. The `z` from `get_position()` is the **forward** direction. They are
+> different axes; the figure above shows both frames side by side.
 
 ---
 
@@ -226,6 +267,19 @@ Move all servos back to their centre position (position `0.0`).
 ## 6. Visual Odometry (Position Tracking)
 
 Visual odometry estimates the robot's position by analysing movement between consecutive camera frames. It uses **FAST feature detection** and **Lucas-Kanade optical flow** to track how the scene shifts from frame to frame, then calculates the camera's 3D translation.
+
+### What the three numbers mean
+
+`get_position()` returns `(x, y, z)` measured in the **camera's** frame of reference, not the robot's:
+
+| Value | Direction | What it is good for |
+|-------|-----------|---------------------|
+| `x` | sideways, to the robot's right | sideways movement |
+| `y` | vertically downwards | nothing useful — on a flat floor it should stay near 0 |
+| `z` | **forwards**, the direction the camera looks | how far the robot has driven |
+
+So to plot the path the robot took as seen from above, plot **`x` against `z`** — not `x` against
+`y`. The figure in [section 4](#4-sensors) shows this frame in blue, alongside the gyro's.
 
 ### Important limitations
 

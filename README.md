@@ -122,6 +122,9 @@ x, y, z = robot.get_position()   # relative units
 robot.stop_odometry()
 ```
 
+The values are in the camera's frame: `z` is **forwards**, `x` is sideways, and `y` is vertical
+(near 0 on a flat floor). For a top-down path, plot `x` against `z`.
+
 `start_odometry(show_debug=True)` opens live debug windows — this requires a monitor
 connected to the robot (with no display the windows are silently skipped).
 
