@@ -120,6 +120,7 @@ robot.forward(speed=50, duration=2.0)   # Move forward for 2 seconds at half spe
 robot.backward(speed=50, duration=1.0)  # Move backward for 1 second
 robot.turn_left(speed=50, duration=0.5) # Pivot turn (one track drives, the other stops)
 robot.turn_right(speed=50, duration=0.5)# Pivot turn the other way
+robot.turn_left(speed=50, duration=2.0, radius=0.5)  # Wider arc: the other track runs at half speed
 robot.spin_left(speed=40, duration=1.0) # Spin in place counter-clockwise
 robot.spin_right(speed=40, duration=1.0)# Spin in place clockwise
 robot.stop()                            # Stop immediately
@@ -138,11 +139,14 @@ robot.wait(1.5)                         # Block for 1.5 s — motors keep runnin
 #### `robot.backward(speed=50, duration=None)`
 נוע אחורה. אותם פרמטרים כמו `forward`.
 
-#### `robot.turn_left(speed=50, duration=None)`
-פניית ציר: זחל אחד נוסע קדימה בעוד השני עוצר. בדקו על הרובוט שלכם לאיזה כיוון הוא מסתובב בפועל — זה תלוי בחיווט המנועים.
+#### `robot.turn_left(speed=50, duration=None, radius=0)`
+פנייה תוך כדי נסיעה קדימה. עם `radius=0` זו פניית ציר: זחל אחד נוסע קדימה בעוד השני עוצר. בדקו על הרובוט שלכם לאיזה כיוון הוא מסתובב בפועל — זה תלוי בחיווט המנועים.
+- `speed` — עוצמת הזחל המהיר, 0–100 (ברירת מחדל: 50)
+- `duration` — שניות לפנייה; אם `None`, פונה עד לקריאה ל-`stop()`
+- `radius` — 0 עד 1 (ברירת מחדל: 0; ערכים מחוץ לטווח מקוצצים לגבול). הזחל השני נע בעוצמה `speed × radius`. `0` מסתובב במקום, ערך גדול יותר נותן קשת רחבה יותר, ו-`1` נוסע ישר. זהו יחס ולא מטרים. עוצמה נמוכה מאוד בזחל האיטי עלולה לא להזיז אותו.
 
-#### `robot.turn_right(speed=50, duration=None)`
-פניית ציר בכיוון ההפוך מ-`turn_left`.
+#### `robot.turn_right(speed=50, duration=None, radius=0)`
+כמו `turn_left`, בכיוון ההפוך. אותם פרמטרים, כולל `radius`.
 
 #### `robot.spin_left(speed=50, duration=None)`
 סתובב נגד כיוון השעון במקום. שני הגלגלים נעים באותה מהירות בכיוונים מנוגדים.

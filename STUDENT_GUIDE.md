@@ -96,6 +96,7 @@ robot.forward(speed=50, duration=2.0)   # Move forward for 2 seconds at half spe
 robot.backward(speed=50, duration=1.0)  # Move backward for 1 second
 robot.turn_left(speed=50, duration=0.5) # Pivot turn (one track drives, the other stops)
 robot.turn_right(speed=50, duration=0.5)# Pivot turn the other way
+robot.turn_left(speed=50, duration=2.0, radius=0.5)  # Wider arc: the other track runs at half speed
 robot.spin_left(speed=40, duration=1.0) # Spin in place counter-clockwise
 robot.spin_right(speed=40, duration=1.0)# Spin in place clockwise
 robot.stop()                            # Stop immediately
@@ -112,12 +113,18 @@ Move forward.
 #### `robot.backward(speed=50, duration=None)`
 Move backward. Same parameters as `forward`.
 
-#### `robot.turn_left(speed=50, duration=None)`
-Pivot turn: one track drives forward while the other stops. Check on your robot
-which way it actually rotates — it depends on the motor wiring of the build.
+#### `robot.turn_left(speed=50, duration=None, radius=0)`
+Turn while driving forward. With `radius=0` this is a pivot turn: one track drives forward while
+the other stops. Check on your robot which way it actually rotates — it depends on the motor
+wiring of the build.
+- `speed` — power of the faster track, 0–100 (default 50)
+- `duration` — seconds to turn; if `None`, turns until `stop()` is called
+- `radius` — 0 to 1 (default 0; values outside that range are clamped). The other track runs at
+  `speed × radius`. `0` pivots on the spot, a larger value gives a wider arc, and `1` drives
+  straight. It is a ratio, not metres. Very low power on the slow track may not move it.
 
-#### `robot.turn_right(speed=50, duration=None)`
-Pivot turn in the opposite direction of `turn_left`.
+#### `robot.turn_right(speed=50, duration=None, radius=0)`
+Same as `turn_left`, turning the opposite way. Same parameters, including `radius`.
 
 #### `robot.spin_left(speed=50, duration=None)`
 Spin counter-clockwise in place. Both wheels move at the same speed in opposite directions.

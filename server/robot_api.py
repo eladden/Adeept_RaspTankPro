@@ -228,9 +228,37 @@ class Robot:
             time.sleep(duration)
             move.motorStop()
 
-    def turn_left(self, speed=50, duration=None):
+    def _arc(self, side, speed, radius):
         """
-        Pivot turn: one track drives forward, the other stops.
+        Drive one track at `speed` and the other at speed * radius, both
+        forward. side is the track that runs at full speed: 'left' or 'right'.
+        radius is clamped to 0..1; 0 stops the other track (a pivot turn).
+        """
+        radius = max(0, min(1, radius))
+        if radius == 0:
+            move.move(speed, self._fwd(), side, radius=0)
+            return
+        slow = int(speed * radius)
+        # Same track directions that move.move() uses for driving forward
+        # ('backward' when the motors are wired in reverse).
+        if self._reverse_motors:
+            left_dir, right_dir = move.left_backward, move.right_backward
+        else:
+            left_dir, right_dir = move.left_forward, move.right_forward
+        if side == 'left':
+            move.motor_left(1, left_dir, speed)
+            move.motor_right(1, right_dir, slow)
+        else:
+            move.motor_left(1, left_dir, slow)
+            move.motor_right(1, right_dir, speed)
+
+    def turn_left(self, speed=50, duration=None, radius=0):
+        """
+        Turn left while driving forward.
+
+        With radius=0 (default) this is a pivot turn: one track drives
+        forward, the other stops. With a radius above 0 the other track drives
+        too, more slowly, so the robot follows a wider arc.
 
         Note: which way the robot physically rotates depends on the motor
         wiring of your build — verify on the robot (see reverse_motors).
@@ -238,19 +266,24 @@ class Robot:
         Parameters
         ----------
         speed : int
-            Motor speed, 0–100 (default 50).
+            Motor speed, 0–100 (default 50). This is the faster track.
         duration : float or None
             Seconds to turn. If None, turns until stop() is called.
+        radius : float
+            0 to 1 (default 0); values outside that range are clamped. The
+            slower track runs at speed * radius. 0 = pivot on the spot,
+            larger = wider arc, 1 = straight line. It is a ratio, not metres.
+            Very low speeds on the slow track may not move it.
         """
-        move.move(speed, self._fwd(), 'left', radius=0)
+        self._arc('left', speed, radius)
         if duration is not None:
             time.sleep(duration)
             move.motorStop()
 
-    def turn_right(self, speed=50, duration=None):
+    def turn_right(self, speed=50, duration=None, radius=0):
         """
-        Pivot turn: one track drives forward, the other stops (mirror of
-        turn_left).
+        Turn right while driving forward (mirror of turn_left, same
+        parameters and the same radius behaviour).
 
         Note: which way the robot physically rotates depends on the motor
         wiring of your build — verify on the robot (see reverse_motors).
@@ -258,11 +291,15 @@ class Robot:
         Parameters
         ----------
         speed : int
-            Motor speed, 0–100 (default 50).
+            Motor speed, 0–100 (default 50). This is the faster track.
         duration : float or None
             Seconds to turn. If None, turns until stop() is called.
+        radius : float
+            0 to 1 (default 0); values outside that range are clamped. The
+            slower track runs at speed * radius. 0 = pivot on the spot,
+            larger = wider arc, 1 = straight line.
         """
-        move.move(speed, self._fwd(), 'right', radius=0)
+        self._arc('right', speed, radius)
         if duration is not None:
             time.sleep(duration)
             move.motorStop()
