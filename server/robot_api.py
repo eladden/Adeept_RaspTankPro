@@ -8,7 +8,9 @@ Students import this module in their sandbox programs.
 See STUDENT_GUIDE.md for full documentation and examples.
 """
 
+import json
 import math
+import os
 import time
 import threading
 
@@ -57,6 +59,33 @@ except Exception as e:
     _OLED_AVAILABLE = False
 
 from monovideoodometery import MonoVideoOdometeryFromCam
+
+# Written by calibrate_camera.py. Optional: without it the odometry uses its
+# built-in focal length and image centre.
+_CALIBRATION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 'camera_calibration.json')
+_DEFAULT_FOCAL = 537.0
+_DEFAULT_PP = (320.0, 240.0)
+
+
+def _load_camera_calibration():
+    """
+    Return the dict from camera_calibration.json, or None if the file is
+    missing or unusable (a broken file only prints a warning).
+    """
+    if not os.path.isfile(_CALIBRATION_FILE):
+        return None
+    try:
+        with open(_CALIBRATION_FILE) as f:
+            c = json.load(f)
+        for key in ('fx', 'fy', 'cx', 'cy', 'image_width', 'image_height'):
+            c[key] = float(c[key])
+        if c['fx'] <= 0 or c['fy'] <= 0:
+            raise ValueError("focal length must be positive")
+        return c
+    except Exception as e:
+        print(f"[odometry] Ignoring camera_calibration.json: {e}")
+        return None
 
 # ---------------------------------------------------------------------------
 # Servo channel definitions (drives the PCA9685 directly; PWM ranges follow
@@ -548,7 +577,7 @@ class Robot:
         except (TypeError, IndexError, ValueError):
             return 0.0
 
-    def start_odometry(self, focal_length=537.0, pp=(320.0, 240.0), scale=1.0, show_debug=False):
+    def start_odometry(self, focal_length=None, pp=None, scale=1.0, show_debug=False):
         """
         Start visual odometry in the background.
 
@@ -564,11 +593,14 @@ class Robot:
 
         Parameters
         ----------
-        focal_length : float
-            Camera focal length in pixels (default 537.0 for the Pi camera
-            at 640×480).
-        pp : tuple
-            Principal point (cx, cy) in pixels (default (320.0, 240.0)).
+        focal_length : float or None
+            Camera focal length in pixels. If None (default), the value from
+            camera_calibration.json is used when that file exists and matches
+            the camera's image size; otherwise 537.0 (the Pi camera at 640×480).
+        pp : tuple or None
+            Principal point (cx, cy) in pixels. If None (default), taken from
+            camera_calibration.json the same way; otherwise (320.0, 240.0).
+            The calibration's lens-distortion numbers are not used.
         scale : float
             Absolute scale factor applied to each translation step
             (default 1.0).
@@ -639,6 +671,27 @@ class Robot:
                 )
             except Exception as e:
                 raise RuntimeError(f"Camera not available: {e}")
+
+        # Fill in focal length / image centre the caller left open: from the
+        # calibration file if there is one for this image size, else defaults.
+        calib = None
+        if focal_length is None or pp is None:
+            calib = _load_camera_calibration()
+            if calib is not None:
+                ret, frame = self._cap.read()
+                if ret and (frame.shape[1], frame.shape[0]) != (
+                        int(calib['image_width']), int(calib['image_height'])):
+                    print("[odometry] camera_calibration.json is for "
+                          f"{int(calib['image_width'])}x{int(calib['image_height'])}, "
+                          f"the camera gives {frame.shape[1]}x{frame.shape[0]}: using defaults")
+                    calib = None
+        if focal_length is None:
+            focal_length = (calib['fx'] + calib['fy']) / 2.0 if calib else _DEFAULT_FOCAL
+        if pp is None:
+            pp = (calib['cx'], calib['cy']) if calib else _DEFAULT_PP
+        if calib is not None:
+            print(f"[odometry] Using camera_calibration.json: focal {focal_length:.1f}, "
+                  f"centre ({pp[0]:.1f}, {pp[1]:.1f})")
 
         self._vo = MonoVideoOdometeryFromCam(
             self._cap,
