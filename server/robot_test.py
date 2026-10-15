@@ -202,10 +202,19 @@ def _test_odometry(robot, show_debug=True):
         print("  Driving forward 3 s to accumulate position …")
         robot.forward(speed=40, duration=3.0)
         x, y, z = robot.get_position()
-        print(f"  Estimated position: x={x:.3f}  y={y:.3f}  z={z:.3f}")
+        print(f"  Estimated position: x={x:.3f}  y={y:.3f}  z={z:.3f}  (z is forwards)")
         _ok("get_position returned a 3-tuple")
     except Exception as e:
         _fail("get_position", str(e))
+
+    try:
+        heading = robot.get_heading()
+        if not isinstance(heading, float):
+            raise TypeError(f"expected a float, got {type(heading).__name__}")
+        print(f"  Estimated heading: {heading:.1f}°")
+        _ok("get_heading returned a float")
+    except Exception as e:
+        _fail("get_heading", str(e))
 
     try:
         robot.stop_odometry()

@@ -8,6 +8,7 @@ Students import this module in their sandbox programs.
 See STUDENT_GUIDE.md for full documentation and examples.
 """
 
+import math
 import time
 import threading
 
@@ -170,6 +171,7 @@ class Robot:
         self._odometry_thread = None
         self._odometry_running = False
         self._position = (0.0, 0.0, 0.0)
+        self._heading = 0.0
         self._position_lock = threading.Lock()
         self._vo = None
         self._cap = None
@@ -494,6 +496,21 @@ class Robot:
     # Visual Odometry
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _yaw_from_rotation(R):
+        """
+        Yaw in degrees from the odometry's accumulated rotation matrix.
+
+        The camera's y axis points down, so the robot's heading is the
+        rotation about it. Before the first successful pose recovery R is
+        all zeros, and atan2(0, 0) is 0.0 — the right answer for "has not
+        turned yet".
+        """
+        try:
+            return math.degrees(math.atan2(float(R[0][2]), float(R[0][0])))
+        except (TypeError, IndexError, ValueError):
+            return 0.0
+
     def start_odometry(self, focal_length=537.0, pp=(320.0, 240.0), scale=1.0, show_debug=False):
         """
         Start visual odometry in the background.
@@ -504,6 +521,9 @@ class Robot:
         Note: Monocular odometry cannot determine absolute scale without
         calibration. The returned x/y/z values are in relative units.
         Call reset_position() to set the current location as the new origin.
+
+        The values are in the camera's frame: z is forwards, x is sideways,
+        y is vertical. See get_position() and get_heading().
 
         Parameters
         ----------
@@ -592,6 +612,7 @@ class Robot:
         with self._position_lock:
             coords = self._vo.get_mono_coordinates()
             self._position = (float(coords[0]), float(coords[1]), float(coords[2]))
+            self._heading = self._yaw_from_rotation(self._vo.R)
 
         self._odometry_running = True
         self._odometry_thread = threading.Thread(
@@ -604,12 +625,14 @@ class Robot:
             try:
                 self._vo.process_frame()
                 coords = self._vo.get_mono_coordinates()
+                heading = self._yaw_from_rotation(self._vo.R)
                 with self._position_lock:
                     self._position = (
                         float(coords[0]),
                         float(coords[1]),
                         float(coords[2]),
                     )
+                    self._heading = heading
                 if self._show_debug:
                     self._draw_debug()
             except RuntimeError as e:
@@ -668,6 +691,14 @@ class Robot:
             (x, y, z) floats in relative units. The origin is the robot's
             position when start_odometry() was called (or reset_position()).
 
+            These are the camera's axes, not the robot's: z is forwards
+            (along the direction the camera looks), x is sideways to the
+            robot's right, and y is vertical, so y stays near 0 on a flat
+            floor. For a top-down path, plot x against z.
+
+            Note this z is not the gyroscope's z — get_gyro() reports
+            rotation about the vertical axis as 'z'.
+
         Raises
         ------
         RuntimeError
@@ -680,12 +711,42 @@ class Robot:
         with self._position_lock:
             return self._position
 
+    def get_heading(self):
+        """
+        Return the latest estimated heading from visual odometry.
+
+        Returns
+        -------
+        float
+            Heading in degrees, measured from whichever way the robot was
+            pointing when start_odometry() was called (or reset_position()).
+
+        Notes
+        -----
+        This is derived from the same camera frames as get_position(), so it
+        drifts the same way and is relative, never absolute. It is also only
+        as good as the odometry's rotation estimate: if the robot turns
+        without the camera seeing enough forward motion, the estimate can
+        lag or stall. Check it against a physical turn before relying on it.
+
+        Raises
+        ------
+        RuntimeError
+            If start_odometry() has not been called.
+        """
+        if not self._odometry_running:
+            raise RuntimeError(
+                "Odometry is not running. Call start_odometry() first."
+            )
+        with self._position_lock:
+            return self._heading
+
     def reset_position(self):
         """
         Reset the odometry origin to the current position.
 
         Restarts the visual odometry instance so that the current camera
-        view becomes (0, 0, 0).
+        view becomes (0, 0, 0) and the current facing becomes 0 degrees.
 
         Raises
         ------
@@ -709,6 +770,7 @@ class Robot:
         )
         with self._position_lock:
             self._position = (0.0, 0.0, 0.0)
+            self._heading = 0.0
 
         self._odometry_running = True
         self._odometry_thread = threading.Thread(

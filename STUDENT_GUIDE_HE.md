@@ -349,7 +349,10 @@ robot.forward(speed=40, duration=3.0)
 
 # Read current position (x, y, z in relative units)
 x, y, z = robot.get_position()
-print(f"Position: x={x:.2f}  y={y:.2f}  z={z:.2f}")
+print(f"Position: forward={z:.2f}  sideways={x:.2f}")
+
+# Read current heading in degrees
+print(f"Heading: {robot.get_heading():.1f} degrees")
 
 # Reset origin to current position
 robot.reset_position()
@@ -376,8 +379,15 @@ robot.stop_odometry()
 נקודת המוצא היא מיקום הרובוט כאשר נקרא `start_odometry()` (או `reset_position()`).
 מחזיר `RuntimeError` אם לא נקרא `start_odometry()`.
 
+#### `robot.get_heading()` → `float`
+מחזיר את הכיוון ב**מעלות**, הנמדד מהכיוון שאליו הרובוט הצביע כאשר נקרא `start_odometry()` (או `reset_position()`).
+
+הערך מחושב מאותם פריימים של המצלמה כמו `get_position()`, ולכן הוא סוחף באותו אופן והוא תמיד יחסי — לעולם לא מוחלט. בנוסף, הוא טוב רק כמידת ההערכה של הסיבוב באודומטריה: אם הרובוט מסתובב בלי שהמצלמה רואה תנועה משמעותית קדימה, הכיוון עשוי להשתרך או להפסיק להשתנות. בדקו אותו מול סיבוב אמיתי לפני שאתם מסתמכים עליו.
+
+מחזיר `RuntimeError` אם לא נקרא `start_odometry()`.
+
 #### `robot.reset_position()`
-אפס את המיקום הנוכחי ל-`(0, 0, 0)`.
+אפס את המיקום הנוכחי ל-`(0, 0, 0)` ואת הכיוון הנוכחי ל-`0`.
 מחזיר `RuntimeError` אם לא נקרא `start_odometry()`.
 
 #### `robot.stop_odometry()`
