@@ -78,12 +78,16 @@ print(f"[OK] Thonny autostart configured: {THONNY_DESKTOP_FILE}")
 # ---------------------------------------------------------------------------
 # 2. Emergency Stop desktop shortcut
 # ---------------------------------------------------------------------------
-estop_desktop_content = """\
+# emergency_stop.py ends the student program (found through the PID that
+# sandbox.py registers) and then forces every motor pin LOW.
+ESTOP_SCRIPT = os.path.join(SCRIPT_DIR, 'server', 'emergency_stop.py')
+
+estop_desktop_content = f"""\
 [Desktop Entry]
 Type=Application
 Name=EMERGENCY STOP
 Comment=Immediately stop all robot movement
-Exec=sudo pkill -f sandbox.py
+Exec=sudo python3 {ESTOP_SCRIPT}
 Terminal=false
 StartupNotify=false
 Icon=gtk-stop

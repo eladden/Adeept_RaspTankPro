@@ -27,6 +27,11 @@ subprocess.run(['sudo', 'pkill', '-f', 'webServer.py'], capture_output=True)
 subprocess.run(['sudo', 'fuser', '-k', '/dev/video0'], capture_output=True)
 time.sleep(3)   # Allow GPIO pins and camera to be released
 
+# Without the web server nothing else starts the robot's Wi-Fi hotspot
+# (only matters when the robot boots straight into sandbox mode)
+import hotspot
+hotspot.ensure_hotspot()
+
 # ---------------------------------------------------------------------------
 # Create the robot object — this initialises all hardware
 # ---------------------------------------------------------------------------
@@ -43,9 +48,14 @@ robot = Robot()
 # ---------------------------------------------------------------------------
 def _sigterm_handler(signum, frame):
     robot.cleanup()
+    emergency_stop.unregister()
     os._exit(0)
 
 signal.signal(signal.SIGTERM, _sigterm_handler)
+
+# Let the EMERGENCY STOP shortcut find this program (see emergency_stop.py)
+import emergency_stop
+emergency_stop.register()
 
 
 # ===========================================================================
@@ -125,4 +135,5 @@ if __name__ == '__main__':
         run()
     finally:
         robot.cleanup()
+        emergency_stop.unregister()
     os._exit(0)
